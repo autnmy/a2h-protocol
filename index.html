@@ -61,7 +61,6 @@
   #track{ display:none }
   body.motion #track{ display:block; position:relative; padding-bottom:42vh }
   body.motion .sentinel{ height:80vh }
-  body.motion .screen{ padding-bottom:80px }
   body.motion .win{
     position:fixed; top:24px; bottom:24px; left:50%; transform:translateX(-50%);
     width:min(900px, calc(100vw - 36px)); margin:0; z-index:5;
@@ -94,12 +93,12 @@
   @keyframes blink{ 50%{ opacity:0 } }
   .in{ outline:none; caret-color:transparent; color:var(--fg); min-width:2px }
 
-  /* ---- advance cue (press ↵ or scroll) ---- */
-  .cue{ position:absolute; left:0; right:0; bottom:44px; display:flex; justify-content:center; pointer-events:none; z-index:4; transition:opacity .35s ease }
-  .cue.gone{ opacity:0; visibility:hidden }
-  .cuebtn{ pointer-events:auto; cursor:pointer; user-select:none; font-size:12.5px; color:var(--dim);
-    background:rgba(13,15,19,.82); -webkit-backdrop-filter:blur(7px); backdrop-filter:blur(7px);
-    border:1px solid var(--edge); border-radius:999px; padding:6px 15px; display:inline-flex; align-items:center; gap:8px; transition:color .2s, border-color .2s }
+  /* ---- advance cue (press ↵ or scroll) — rides below the latest block ---- */
+  .cue{ margin:18px 0 6px }
+  .cue.gone{ display:none }
+  .cuebtn{ cursor:pointer; user-select:none; font-size:12.5px; color:var(--dim);
+    background:rgba(255,255,255,.025);
+    border:1px solid var(--edge); border-radius:999px; padding:5px 14px; display:inline-flex; align-items:center; gap:8px; transition:color .2s, border-color .2s }
   .cuebtn:hover{ color:var(--fg); border-color:#2c333d }
   .cuebtn kbd{ font:inherit; color:var(--green); background:rgba(87,217,163,.1); border:1px solid rgba(87,217,163,.3); border-radius:5px; padding:0 6px }
   .cuebtn .chev{ color:var(--cyan); animation:bob 1.6s ease-in-out infinite }
@@ -233,9 +232,11 @@
   var revealed=-1, unlocked=-1, busy=false, doneAll=false;
   async function pump(){
     if(busy) return; busy=true;
+    removeCue();
     while(revealed < unlocked){ revealed++; await reveal(steps[revealed], false); }
     busy=false;
-    if(revealed === steps.length-1 && !doneAll){ doneAll=true; startInteractive(); }
+    if(revealed === steps.length-1){ if(!doneAll){ doneAll=true; startInteractive(); } }
+    else { showCueBelow(); }
   }
   function unlock(i){ if(i>unlocked){ unlocked=i; pump(); } }
 
@@ -243,7 +244,10 @@
   // so the keyboard path and the scroll path drive the exact same unlock.
   var sentinelEls = [], navTarget = 0;
   var cueEl = document.getElementById('cue');
-  function hideCue(){ if(cueEl) cueEl.classList.add('gone'); }
+  // The cue rides directly below the latest revealed block: detached while the
+  // next block types, re-appended at the bottom once we're idle and waiting.
+  function removeCue(){ if(cueEl && cueEl.parentNode) cueEl.parentNode.removeChild(cueEl); }
+  function showCueBelow(){ if(!cueEl) return; cueEl.classList.remove('gone'); screen.appendChild(cueEl); autoscroll(); }
   function revealNext(){
     if(doneAll) return;
     var furthest = Math.max(navTarget, unlocked);
@@ -295,7 +299,7 @@
     addPrompt(20);
   }
   function startInteractive(){
-    hideCue();
+    removeCue();
     screen.appendChild(el('tl', '<span class="faint"># your turn — try: a2h rules · a2h docs · npm run demo · help</span>'));
     addPrompt(40);
   }
@@ -328,7 +332,6 @@
         : 'tap or scroll <span class="chev">⌄</span>';
       cbtn.addEventListener('click', revealNext);
     }
-    if(cueEl) cueEl.classList.remove('gone');
     document.addEventListener('keydown', function(e){
       if(e.key !== 'Enter' || doneAll) return;
       var t = e.target;
