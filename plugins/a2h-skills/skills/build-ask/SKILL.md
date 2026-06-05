@@ -1,0 +1,102 @@
+---
+name: Build an A2H ask skill
+description: Scaffold a custom, app-specific "ask" skill so this app's agents can ask a human a decision via an A2H Hub and get the signed answer routed back. Use when an implementer wants to add A2H ask to their app, let agents request a human decision (approve/select/input), or wire the decision leg of their app to OH HAI / an A2H Hub.
+---
+
+# Build an A2H `ask` skill for this app
+
+You are scaffolding a **custom, app-specific `ask` skill** that THIS app's agents invoke to put a
+**decision** in front of a human via the app's A2H Hub, and have the **signed answer routed back** — even
+if the agent run has already exited. You are the *builder*: you produce the skill.
+
+A2H is the Agent-to-Human Protocol — <https://a2hprotocol.org>. Unlike `notify`, `ask` has a **response
+leg**, which makes it the most involved verb. Get these right in the generated skill:
+
+- **`idempotency_key` is REQUIRED** — stable per logical request, scope `(agent.id, idempotency_key)`, so a
+  lost `202` retried doesn't create a second human decision.
+- **`callback`** — where the answer goes: `push` (the Hub `POST`s the signed Response to your URL) or
+  `pull` (your agent polls `GET {HUB}/v1/messages/{id}/response`).
+- **Resume + verify** — the run may end; on the callback it is re-invoked. The Response is **signed**
+  (RFC 8785 JCS + detached HMAC-SHA256, `jti` nonce, ±120s window, bound to `id` + `resolution_id` +
+  `callback_url`). The agent **MUST verify the signature, dedupe on `resolution_id`, and act at most once**.
+- **`state`** — any resume context is **agent-owned and sealed by the agent** (AEAD); the Hub never holds
+  the key and returns it verbatim. Seal before sending; verify + open on resume. Never put the key in `state`.
+
+## Steps
+
+### 1. Gather the app's A2H config
+Inspect the repo (`AGENTS.md` / `CLAUDE.md` / `.env.example` / config), then ask for what's missing:
+- **App name / slug** → names the skill (e.g. `acme-ask`).
+- **Hub base URL** + **agent bearer auth** (env var; never hardcode).
+- **Agent identity** — `agent.id` / `run_id` / `runtime` / `project`.
+- **Callback strategy** — `push` (your app exposes a verified, agent-owned URL + a callback auth scheme:
+  `hmac` via `secret_ref`, or `bearer`/`apikey` via `token_ref`) **or** `pull` (the agent polls). Pick
+  `pull` if the app can't expose an inbound URL.
+- **Resume model** — how a finished run is re-invoked on the answer (queue, webhook handler, cron poll).
+- **Signature key** — the shared secret the agent uses to **verify** the Response (per-agent; distinct from
+  any callback transport credential).
+
+### 2. Generate the skill
+Write `<skills-dir>/<app>-ask/SKILL.md` from the template below. For verification + sealing, prefer a small
+helper that uses the A2H reference primitives (`canonicalize`, `signing.verifyResponse`, `state-seal`) —
+see the [reference implementation](https://github.com/autnmy/a2h-protocol/tree/main/reference) — rather
+than re-deriving crypto.
+
+### 3. Verify
+Smoke-test the full loop: send a test `ask`, resolve it in the inbox, confirm the agent receives the
+Response, **verifies the signature**, reads `response.value`, and acts **once** (a replayed delivery is a
+no-op).
+
+### 4. Hand off
+Document how agents invoke it, the callback/resume wiring, and required secrets.
+
+## Template — the generated `<app>-ask` skill
+
+````markdown
+---
+name: <APP> ask
+description: Ask a human a decision via <APP>'s A2H Hub and route the signed answer back to the agent. Use when an agent needs a human choice (approve/select/input) before it can proceed.
+---
+
+# Ask a human a decision (A2H `ask`)
+
+## Send
+- **Endpoint:** `POST <HUB_URL>/v1/messages`  ·  **Auth:** `Authorization: Bearer $<AUTH_ENV>`
+
+**Envelope** (`type: "ask"`):
+- `a2h_version`: `"0.2"`, `created_at`: ISO now
+- `agent`: `{ "id": "<AGENT_ID>", "run_id": <RUN_ID>, "runtime": "<RUNTIME>", "project": "<PROJECT>" }`
+- `title`, `body` (Markdown), `priority?`, `tags?`
+- **`idempotency_key`** (REQUIRED): stable per logical request (e.g. a hash of the decision context).
+- `request`: the decision shape — one of:
+  - `{ "mode": "confirm", "options": [{"value":"yes","label":"…"},{"value":"no","label":"…"}] }`
+  - `{ "mode": "select", "options": [{"value":"a","label":"…"}, …] }`  (≥1 option)
+  - `{ "mode": "input", "schema": { …flat JSON Schema: string/number/boolean/enum… } }`
+- `request.allowed_resolvers` *(optional)*: e.g. `["human:*"]` — **fail-closed** if omitted-and-required by Hub policy.
+- `request.callback`: `{ "mode": "push", "url": "<CALLBACK_URL>", "auth": { "scheme": "<hmac|bearer|apikey>", "<secret_ref|token_ref>": "…" } }` — or `{ "mode": "pull" }`.
+- `state` *(optional)*: an **agent-sealed** (AEAD) resume blob. Seal it yourself; the Hub stores it opaquely.
+
+Expect `202 { id, status: "open" }`. If you retry, reuse the **same `idempotency_key`** — you'll get the
+same `id` back, never a duplicate decision.
+
+## Receive (resume)
+The run may end here. When the human resolves it, the Hub sends a **signed Response**:
+- **push:** the Hub `POST`s it to `<CALLBACK_URL>` — your handler re-invokes this agent.
+- **pull:** poll `GET <HUB_URL>/v1/messages/{id}/response` (Bearer) until it returns one.
+
+Then **MUST**:
+1. **Verify** the signature: recompute RFC 8785 JCS over the `signed_context`, check the detached
+   `X-A2H-Signature: v1=…` HMAC with the per-agent key, the `jti` nonce (not seen before), the ±120s
+   window, and the binding to `id` + `resolution_id` + `callback_url`. Reject on any mismatch.
+2. **Dedupe** on `resolution_id` and **act at most once** (callbacks may be delivered more than once).
+3. If you sent `state`, **verify + open** it (AEAD) before trusting it.
+4. Read the outcome: `resolution ∈ { answered | declined | cancelled | expired }`; the human's answer is
+   `response.value` (shape matches `request`), with optional `response.comment`.
+
+Use the A2H reference (`signing.verifyResponse`, `state-seal.openState`) for steps 1 and 3.
+````
+
+## References
+- Spec: <https://a2hprotocol.org/spec/v0.2.md> (§5 verbs, §6 response, §7 lifecycle, §9 security)
+- Schemas: <https://a2hprotocol.org/schema/v0.2/message.schema.json> · <https://a2hprotocol.org/schema/v0.2/response.schema.json>
+- Reference impl (verify/seal): <https://github.com/autnmy/a2h-protocol/tree/main/reference>

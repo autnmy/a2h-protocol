@@ -1,0 +1,13 @@
+{
+  "name": "a2h-skills",
+  "description": "Meta-skills that scaffold app-specific A2H notify / ask / task skills for your app, wired to your A2H Hub (e.g. OH HAI). Each builder generates a ready-to-use verb skill your agents invoke to reach a human.",
+  "version": "0.1.0",
+  "author": {
+    "name": "Autonomy",
+    "url": "https://a2hprotocol.org"
+  },
+  "homepage": "https://a2hprotocol.org",
+  "repository": "https://github.com/autnmy/a2h-protocol",
+  "license": "Apache-2.0",
+  "keywords": ["a2h", "agent-to-human", "human-in-the-loop", "notify", "ask", "task", "skill-generator"]
+}
