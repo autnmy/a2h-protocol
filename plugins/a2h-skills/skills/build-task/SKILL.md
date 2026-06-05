@@ -29,7 +29,8 @@ Inspect the repo (`AGENTS.md` / `CLAUDE.md` / `.env.example` / config), then ask
 - **Callback strategy** — `push` (verified, agent-owned URL + callback auth: `hmac`/`secret_ref` or
   `bearer`/`apikey`/`token_ref`) **or** `pull` (the agent polls).
 - **Resume model** — how a finished run is re-invoked when the task resolves.
-- **Signature key** — the per-agent secret used to **verify** the Response.
+- **Signature key** *(push only)* — for `push`, the per-agent secret used to **verify** the signed Response.
+  **Pull mode needs no signature key** — the terminal response is trusted via the authenticated GET transport.
 
 ### 2. Generate the skill
 Write `<skills-dir>/<app>-task/SKILL.md` from the template below. For verification + sealing, prefer a

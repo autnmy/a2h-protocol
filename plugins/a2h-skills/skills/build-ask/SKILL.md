@@ -37,8 +37,9 @@ Inspect the repo (`AGENTS.md` / `CLAUDE.md` / `.env.example` / config), then ask
   `hmac` via `secret_ref`, or `bearer`/`apikey` via `token_ref`) **or** `pull` (the agent polls). Pick
   `pull` if the app can't expose an inbound URL.
 - **Resume model** — how a finished run is re-invoked on the answer (queue, webhook handler, cron poll).
-- **Signature key** — the shared secret the agent uses to **verify** the Response (per-agent; distinct from
-  any callback transport credential).
+- **Signature key** *(push only)* — for `push`, the per-agent secret the agent uses to **verify** the
+  signed Response (distinct from any callback transport credential). **Pull mode needs no signature key** —
+  the terminal response is trusted via the authenticated GET transport, so don't require one for a pull-only skill.
 
 ### 2. Generate the skill
 Write `<skills-dir>/<app>-ask/SKILL.md` from the template below. For verification + sealing, prefer a small
@@ -110,8 +111,11 @@ Then **MUST**:
 2. **Dedupe** on `(in_reply_to, resolution_id)` (where `in_reply_to` is the message `id`) and **act at most
    once** (callbacks may be delivered more than once).
 3. If you sent `state`, **verify + open** it (AEAD) before trusting it.
-4. Read the outcome: `resolution ∈ { answered | declined | cancelled | expired }`; the human's answer is
-   `response.value` (shape matches `request`), with optional `response.comment`.
+4. Read the outcome by **`resolution` first** (`answered | declined | cancelled | expired`). Only `answered`
+   carries the human's answer in `response.value` (shape matches `request`). For `declined` / `cancelled` /
+   `expired` there is **no `response.value`** — branch on the resolution and act accordingly; **don't treat a
+   missing value as an error**. `response.comment` + `actor` may still be present, and an `expired` with
+   `defaulted: true` came from the Hub's `default_on_expire`.
 
 Use the A2H reference (`signing.verifyResponse`, `state-seal.openState`) for steps 1 (push) and 3.
 ````

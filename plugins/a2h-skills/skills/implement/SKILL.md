@@ -40,7 +40,7 @@ Implement these (paths are conventional — match the spec's shapes, adapt routi
 | Method | Path | Purpose |
 |---|---|---|
 | POST | `/v1/messages` | ingest `notify`/`ask`/`task`; **Hub assigns `id`**; returns `202` + ack |
-| GET | `/v1/messages` · `/v1/messages/{id}` | inbox read; reads are **idempotent**; **pull-mode** clients read the signed terminal Response **embedded in the message body** of `GET /v1/messages/{id}` |
+| GET | `/v1/messages` · `/v1/messages/{id}` | inbox read; reads are **idempotent**; **pull-mode** clients read the terminal Response **embedded in the message body** of `GET /v1/messages/{id}` — trusted via the authenticated GET transport, **not signed** |
 | POST | `/v1/messages/{id}/resolve` | a human resolves an `ask`/`task` → triggers the signed response |
 | POST | `/v1/messages/{id}/cancel` | the agent withdraws an open `ask` → `cancelled` |
 | GET | `/.well-known/a2h` | advertise limits + supported auth schemes (standardized discovery) |
@@ -48,17 +48,20 @@ Implement these (paths are conventional — match the spec's shapes, adapt routi
 
 ## 3. The Hub MUSTs — your definition of done
 
-Every one of these is normative. The implementation is not done until each is satisfied **and** covered by
-a test. (This is the same checklist the conformance vectors enforce.)
+Every one of these is normative. This is the **load-bearing map, not an exhaustive restatement** — the
+linked spec sections and the **conformance vectors are the contract**. Treat the vectors as the bar: the
+implementation is done when each MUST below holds **and** the vectors pass.
 
 - [ ] **`id` is Hub-assigned**, never a client input. Clients correlate via `client_ref` (opaque; never a dedup key; never shown to resolvers).
 - [ ] **Idempotency:** `idempotency_key` is **required** for `ask`/`task`; dedup scope `(agent.id, idempotency_key)` → a retry with an **identical payload** returns the same `id`, never a second row/decision. Reusing the **same key with a different payload** MUST return **`409 Conflict`** (never silently the original `id`).
 - [ ] **`state` is agent-owned + sealed:** opaque AEAD blob; the **Hub MUST NOT inspect, log, or hold the key**; returned **verbatim** on resolution.
 - [ ] **Every pushed Response is signed:** RFC 8785 **JCS** over the `signed_context` + a **detached HMAC-SHA256**, with a `jti` nonce, a ±120s window, and binding to `id` + `resolution_id` + `callback_url`.
 - [ ] **`actor` is Hub-attested** from the authenticated session — never the resolving request body; format `<type>:<id>`, `type ∈ {human, agent, system}`.
-- [ ] **Resolver authz is fail-closed** (`allowed_resolvers` defaults closed).
+- [ ] **Resolver authz is fail-closed** (`allowed_resolvers` absent ⇒ only the submitting `agent.id` may resolve).
+- [ ] **Request-leg auth** (§9.1): the agent credential is scoped to one `agent.id` — **reject an envelope whose `agent.id` ≠ the credential (`403`)**, and **bind each message's poll/callback access to the submitting principal** (one agent must not read another's message by `id`); `run_id` is opaque and **MUST NOT** authorize cross-run access.
 - [ ] **Callbacks** target an **agent-owned, verified** host (push or pull) with **SSRF controls**: host-ownership verification, private-range refusal at delivery time, no redirects, credential-host binding. The Hub **MUST NOT** server-side-fetch `context.file.uri` unless that URI passes the **same host controls used for callbacks**.
 - [ ] **Lifecycle** is atomic, single-writer, **first-terminal-wins**. Resolutions: `ask` → `answered|declined|cancelled|expired`; `task` → `completed|dismissed|expired`. Statuses: `delivered` is terminal-on-acceptance for **`notify` only** (`open` → `delivered`); `ask`/`task` transition **`open` → terminal** directly (no `delivered` state).
+- [ ] **Expiry & defaults** (§7, §8.5): reject `expires_at` not in the future at submit (`422`); when `expires_at` passes with no human action, auto-resolve `expired` — for `ask`, apply `default_on_expire` as a Response with `defaulted: true` and `actor: "system:default_on_expire"`; `task` has no default (bare `expired`).
 - [ ] **Durable persistence** (§3.1): a Hub process restart **MUST NOT** lose open asks/tasks, delivered notifies, committed resolutions, or pending push-delivery obligations. **In-memory-only storage is non-conformant** — back the lifecycle with a real store and add a restart test.
 - [ ] **`body` is untrusted Markdown** — sanitize to a **no-raw-HTML** profile before any rendering.
 - [ ] **Telemetry/logs exclude** `state`, `body`, `context`, `response.value`, `response.comment` — `state` is a hard **MUST NOT log** (the agent's opaque resume context).
