@@ -5,7 +5,7 @@
 import test from "node:test";
 import assert from "node:assert/strict";
 import { randomBytes } from "node:crypto";
-import { Hub, type DeliveredPush } from "../src/hub.js";
+import { Hub, HubError, type DeliveredPush } from "../src/hub.js";
 import { Agent } from "../src/agent.js";
 import { sealState } from "../src/state-seal.js";
 import type { A2hMessage } from "../src/types.js";
@@ -93,6 +93,71 @@ test("resolve after terminal returns the first outcome (first-terminal-wins)", (
   assert.equal(second.resolution_id, first.resolution_id);
 });
 
+test("agent cancels its own open ask -> cancelled, Response delivered like a resolve (§8.4)", () => {
+  const sealKey = randomBytes(32);
+  const deliveries: DeliveredPush[] = [];
+  const hub = new Hub({ signingKey: SIGNING_KEY, now: () => T0, onDeliver: (p) => { deliveries.push(p); } });
+  const ack = hub.submit(makeAsk(sealKey, T0));
+
+  const resp = hub.cancel(ack.id, "deploybot/dev-team", T0 + 1_000);
+  assert.equal(resp.resolution, "cancelled");
+  assert.equal(hub.get(ack.id, "deploybot/dev-team")?.status, "cancelled");
+  assert.ok(deliveries[0], "the cancelled Response is delivered so the agent gets closure");
+
+  // Idempotent: a repeat cancel returns the same terminal outcome.
+  const again = hub.cancel(ack.id, "deploybot/dev-team", T0 + 2_000);
+  assert.equal(again.resolution_id, resp.resolution_id);
+});
+
+test("submitter-binding (§9.1): a foreign principal cannot cancel or poll another agent's ask", () => {
+  const sealKey = randomBytes(32);
+  const hub = new Hub({ signingKey: SIGNING_KEY, now: () => T0 });
+  const ack = hub.submit(makeAsk(sealKey, T0));
+
+  // A different authenticated agent learns/guesses the id — it must not be able to withdraw it,
+  // and the id must be indistinguishable from an unknown one (not_found, not a 403 that confirms it).
+  assert.throws(
+    () => hub.cancel(ack.id, "evilbot/other", T0 + 1_000),
+    (e: unknown) => e instanceof HubError && e.code === "not_found",
+  );
+  // The same binding hides it from a foreign poll, but not from its submitter — and the ask
+  // is untouched: still open, still the submitter's to resolve/cancel.
+  assert.equal(hub.get(ack.id, "evilbot/other"), null);
+  assert.equal(hub.get(ack.id, "deploybot/dev-team")?.status, "open");
+});
+
+test("cancel after a different terminal returns already_terminal carrying the existing outcome (§8.4 409)", () => {
+  const sealKey = randomBytes(32);
+  const hub = new Hub({ signingKey: SIGNING_KEY, now: () => T0 });
+  const ack = hub.submit(makeAsk(sealKey, T0));
+  hub.resolve(ack.id, { actor: "human:alice", resolution: "answered", value: "ship" }, T0 + 1_000);
+  assert.throws(
+    () => hub.cancel(ack.id, "deploybot/dev-team", T0 + 2_000),
+    (e: unknown) =>
+      e instanceof HubError &&
+      e.code === "already_terminal" &&
+      // §8.4: the 409 carries the existing { id, status, resolution } so the agent reads the
+      // real outcome from the exception itself — no second lookup.
+      e.details?.id === ack.id &&
+      e.details?.status === "answered" &&
+      e.details?.resolution === "answered",
+  );
+  assert.equal(hub.get(ack.id, "deploybot/dev-team")?.status, "answered");
+});
+
+test("a cancel past expires_at loses to the default expiry, not cancelled (§7 expiry-vs-cancel)", () => {
+  const sealKey = randomBytes(32);
+  const hub = new Hub({ signingKey: SIGNING_KEY, now: () => T0 });
+  const ack = hub.submit(makeAsk(sealKey, T0)); // expires_at = T0 + 60_000, default_on_expire = "hold"
+  // The submitter cancels one ms after the deadline but before any expiry sweep ran. The ask
+  // expired at expires_at against the same clock, so the default outcome wins over cancel.
+  const resp = hub.cancel(ack.id, "deploybot/dev-team", T0 + 60_001);
+  assert.equal(resp.resolution, "expired");
+  assert.equal(resp.defaulted, true);
+  assert.equal(resp.response?.value, "hold");
+  assert.equal(hub.get(ack.id, "deploybot/dev-team")?.status, "expired");
+});
+
 test("notify is delivered on acceptance and durably pull-checkable", () => {
   const hub = new Hub({ signingKey: SIGNING_KEY, now: () => T0 });
   const notify: A2hMessage = {
@@ -105,7 +170,7 @@ test("notify is delivered on acceptance and durably pull-checkable", () => {
   };
   const ack = hub.submit(notify);
   assert.equal(ack.status, "delivered");
-  const got = hub.get(ack.id);
+  const got = hub.get(ack.id, "deploybot/dev-team");
   assert.equal(got?.status, "delivered");
 });
 
