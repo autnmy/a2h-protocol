@@ -31,15 +31,16 @@ leg**, which makes it the most involved verb. Get these right in the generated s
 ### 1. Gather the app's A2H config
 Inspect the repo (`AGENTS.md` / `CLAUDE.md` / `.env.example` / config), then ask for what's missing:
 - **App name / slug** → names the skill (e.g. `acme-ask`).
-- **Hub base URL** + **agent bearer auth** (env var; never hardcode).
+- **Hub base URL** + **agent auth** — the Hub's advertised `bearer`/`apikey` scheme (env var; never hardcode).
 - **Agent identity** — `agent.id` / `run_id` / `runtime` / `project`.
 - **Callback strategy** — `push` (your app exposes a verified, agent-owned URL + a callback auth scheme:
   `hmac` via `secret_ref`, or `bearer`/`apikey` via `token_ref`) **or** `pull` (the agent polls). Pick
   `pull` if the app can't expose an inbound URL.
 - **Resume model** — how a finished run is re-invoked on the answer (queue, webhook handler, cron poll).
-- **Signature key** *(push only)* — for `push`, the per-agent secret the agent uses to **verify** the
-  signed Response (distinct from any callback transport credential). **Pull mode needs no signature key** —
-  the terminal response is trusted via the authenticated GET transport, so don't require one for a pull-only skill.
+- **Signature verifier** *(push only)* — for `push`, the material to **verify** the signed Response for the
+  Hub's **advertised algorithm**: a per-agent **shared secret** for `hmac-sha256`, or the Hub's **public key**
+  for `ed25519` (capability `signature_algs`) — distinct from any callback transport credential. **Pull mode
+  needs none** — the terminal response is trusted via the authenticated GET transport.
 - **State-seal key** *(if you send `state`)* — a per-`agent.id` secret **pre-positioned in the agent runtime**
   (a CI/Actions secret, a vault env var) that **survives re-invocation**, is **distinct from the callback
   credential**, and is **never embedded in `state`** — the resumed run uses it to open the sealed blob.
@@ -77,11 +78,11 @@ description: Ask a human a decision via <APP>'s A2H Hub and route the signed ans
 # Ask a human a decision (A2H `ask`)
 
 ## Send
-- **Endpoint:** `POST <HUB_URL>/v1/messages`  ·  **Auth:** `Authorization: Bearer $<AUTH_ENV>`
+- **Endpoint:** `POST <HUB_URL>/v1/messages`  ·  **Auth:** the Hub's advertised scheme (capability `auth_schemes`) — `Authorization: Bearer $<AUTH_ENV>` for `bearer`, or the API-key header for `apikey`
 
 **Envelope** (`type: "ask"`):
 - `a2h_version`: `"0.2"`, `created_at`: ISO now
-- `agent`: `{ "id": "<AGENT_ID>", "run_id": <RUN_ID>, "runtime": "<RUNTIME>", "project": "<PROJECT>" }`
+- `agent`: `{ "id": "<AGENT_ID>", "run_id": "<RUN_ID>", "runtime": "<RUNTIME>", "project": "<PROJECT>" }`  *(every value is a JSON string — keep the quotes)*
 - `title`, `body` (Markdown), `priority?`, `tags?`
 - **`idempotency_key`** (REQUIRED): stable per logical request (e.g. a hash of the decision context).
 - `request`: the decision shape — one of:

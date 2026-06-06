@@ -44,7 +44,7 @@ Implement these over **HTTPS only** (plaintext MUST NOT be offered, §8). Paths 
 
 | Method | Path | Purpose |
 |---|---|---|
-| POST | `/v1/messages` | ingest `notify`/`ask`/`task`; **Hub assigns `id`**; returns `202` + ack |
+| POST | `/v1/messages` | ingest `notify`/`ask`/`task`; **Hub assigns `id`**; returns `202` + the submit-ack body **including `poll_url`** (the canonical per-message URL clients poll) |
 | GET | `/v1/messages` · `/v1/messages/{id}` | inbox read; reads are **idempotent**; **pull-mode** clients read the terminal Response **embedded in the message body** of `GET /v1/messages/{id}` — trusted via the authenticated GET transport, **not signed** |
 | POST | `/v1/messages/{id}/resolve` | a human resolves an `ask`/`task` → triggers the signed response |
 | POST | `/v1/messages/{id}/cancel` | the agent withdraws an open `ask` → terminal `cancelled`, which **emits a terminal Response** delivered like a resolve (push and/or embedded for pull) so the agent gets closure |
@@ -62,14 +62,14 @@ implementation is done when each MUST below holds **and** the vectors pass.
 - [ ] **`state` is agent-owned + sealed:** opaque AEAD blob; the **Hub MUST NOT inspect, log, or hold the key**; returned **verbatim** on resolution.
 - [ ] **Every pushed Response is signed:** RFC 8785 **JCS** over the `signed_context` + a **detached signature** — `hmac-sha256`, or `ed25519` if the Hub advertises it in capability `signature_algs` (§9.2) — with a `jti` nonce, a ±120s window, and binding to `id` + `resolution_id` + `callback_url`.
 - [ ] **`actor` is Hub-attested** from the authenticated session — never the resolving request body; format `<type>:<id>`, `type ∈ {human, agent, system}`.
-- [ ] **Resolver authz is fail-closed** (`allowed_resolvers` absent ⇒ only the submitting `agent.id` may resolve).
+- [ ] **Resolver authz is fail-closed** (`allowed_resolvers` absent ⇒ only the submitting agent's actor **`agent:<agent.id>`** may resolve — actors compare in `<type>:<id>` form, never the raw id).
 - [ ] **Request-leg auth** (§9.1): the agent credential is scoped to one `agent.id` — **reject an envelope whose `agent.id` ≠ the credential (`403`)**, and **bind each message's poll/callback access to the submitting principal** (one agent must not read another's message by `id`); `run_id` is opaque and **MUST NOT** authorize cross-run access.
 - [ ] **Callbacks** target an **agent-owned, verified** host (push or pull) with **SSRF controls**: host-ownership verification, private-range refusal at delivery time, no redirects, credential-host binding. The Hub **MUST NOT** server-side-fetch `context.file.uri` unless that URI passes the **same host controls used for callbacks**.
 - [ ] **Lifecycle** is atomic, single-writer, **first-terminal-wins**. Resolutions: `ask` → `answered|declined|cancelled|expired`; `task` → `completed|dismissed|expired`. Statuses: `delivered` is terminal-on-acceptance for **`notify` only** (`open` → `delivered`); `ask`/`task` transition **`open` → terminal** directly (no `delivered` state).
 - [ ] **Expiry & defaults** (§7, §8.5): reject `expires_at` not in the future at submit (`422`); when `expires_at` passes with no human action, auto-resolve `expired` — for `ask`, apply `default_on_expire` as a Response with `defaulted: true` and `actor: "system:default_on_expire"`; `task` has no default (bare `expired`).
 - [ ] **Durable persistence** (§3.1): a Hub process restart **MUST NOT** lose open asks/tasks, delivered notifies, committed resolutions, or pending push-delivery obligations. **In-memory-only storage is non-conformant** — back the lifecycle with a real store and add a restart test.
-- [ ] **`body` is untrusted Markdown** — sanitize to a **no-raw-HTML** profile before any rendering.
-- [ ] **Telemetry/logs exclude** `state`, `body`, `context`, `response.value`, `response.comment` — `state` is a hard **MUST NOT log** (the agent's opaque resume context).
+- [ ] **`body` is untrusted Markdown** — sanitize to a **no-raw-HTML** profile **and do not auto-fetch remote images** (disable or proxy `![](http…)`) before any rendering, so rendering can't leak the resolver's IP/network info (§9.6).
+- [ ] **Telemetry/logs exclude** `state`, `body`, `context`, `response.value`, `response.comment` — `state` is a hard **MUST NOT log**. Also exclude any value marked **`x-a2h-sensitive: true`** (an `input`-schema property) or under a message-level **`sensitive: true`**, wherever it is nested.
 - [ ] **Capability discovery** advertises `max_body_bytes` / `max_part_bytes` / `max_context_parts` / auth schemes, and the Hub **enforces** those limits at ingest.
 - [ ] **Submit returns `202`; GET reads are idempotent** (a terminal message returns the same body).
 

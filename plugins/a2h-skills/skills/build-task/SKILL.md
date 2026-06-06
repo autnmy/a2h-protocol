@@ -24,13 +24,14 @@ its security contract; only the payload and resolution values differ:
 ### 1. Gather the app's A2H config
 Inspect the repo (`AGENTS.md` / `CLAUDE.md` / `.env.example` / config), then ask for what's missing:
 - **App name / slug** → names the skill (e.g. `acme-task`).
-- **Hub base URL** + **agent bearer auth** (env var; never hardcode).
+- **Hub base URL** + **agent auth** — the Hub's advertised `bearer`/`apikey` scheme (env var; never hardcode).
 - **Agent identity** — `agent.id` / `run_id` / `runtime` / `project`.
 - **Callback strategy** — `push` (verified, agent-owned URL + callback auth: `hmac`/`secret_ref` or
   `bearer`/`apikey`/`token_ref`) **or** `pull` (the agent polls).
 - **Resume model** — how a finished run is re-invoked when the task resolves.
-- **Signature key** *(push only)* — for `push`, the per-agent secret used to **verify** the signed Response.
-  **Pull mode needs no signature key** — the terminal response is trusted via the authenticated GET transport.
+- **Signature verifier** *(push only)* — for `push`, the material to **verify** the signed Response for the
+  Hub's **advertised algorithm**: a per-agent **shared secret** for `hmac-sha256`, or the Hub's **public key**
+  for `ed25519` (capability `signature_algs`). **Pull mode needs none** — trusted via the GET transport.
 - **State-seal key** *(if you send `state`)* — a per-`agent.id` secret **pre-positioned in the agent runtime**
   that **survives re-invocation**, is **distinct from the callback credential**, and is **never embedded in
   `state`** — the resumed run uses it to open the sealed blob. (Separate from the response-signature key.)
@@ -65,11 +66,11 @@ description: Ask a human to perform a manual, out-of-band action via <APP>'s A2H
 # Ask a human to do a task (A2H `task`)
 
 ## Send
-- **Endpoint:** `POST <HUB_URL>/v1/messages`  ·  **Auth:** `Authorization: Bearer $<AUTH_ENV>`
+- **Endpoint:** `POST <HUB_URL>/v1/messages`  ·  **Auth:** the Hub's advertised scheme (capability `auth_schemes`) — `Authorization: Bearer $<AUTH_ENV>` for `bearer`, or the API-key header for `apikey`
 
 **Envelope** (`type: "task"`):
 - `a2h_version`: `"0.2"`, `created_at`: ISO now
-- `agent`: `{ "id": "<AGENT_ID>", "run_id": <RUN_ID>, "runtime": "<RUNTIME>", "project": "<PROJECT>" }`
+- `agent`: `{ "id": "<AGENT_ID>", "run_id": "<RUN_ID>", "runtime": "<RUNTIME>", "project": "<PROJECT>" }`  *(every value is a JSON string — keep the quotes)*
 - `title`, `body` (Markdown), `priority?`, `tags?`
 - **`idempotency_key`** (REQUIRED): stable per logical task.
 - `action`:

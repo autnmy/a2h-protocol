@@ -57,12 +57,12 @@ description: Send a fire-and-forget notification to a human via <APP>'s A2H Hub 
 Compose and POST an A2H `notify` to <APP>'s Hub. Fire-and-forget — do not wait for a reply.
 
 - **Endpoint:** `POST <HUB_URL>/v1/messages`
-- **Auth:** `Authorization: Bearer $<AUTH_ENV>`  (read from the environment; never hardcode)
+- **Auth:** the Hub's advertised scheme (capability `auth_schemes`) — `Authorization: Bearer $<AUTH_ENV>` for `bearer`, or the API-key header for `apikey`; read from the environment, never hardcode
 
 **Envelope** (`type: "notify"`):
 - `a2h_version`: `"0.2"`
 - `created_at`: ISO-8601 now
-- `agent`: `{ "id": "<AGENT_ID>", "run_id": <RUN_ID>, "runtime": "<RUNTIME>", "project": "<PROJECT>" }`
+- `agent`: `{ "id": "<AGENT_ID>", "run_id": "<RUN_ID>", "runtime": "<RUNTIME>", "project": "<PROJECT>" }`  *(every value is a JSON string — keep the quotes)*
 - `title`: short subject (≤ 200 chars)
 - `body`: detail in **Markdown** (the Hub treats it as untrusted and sanitizes it)
 - `priority` *(optional)*: `low | normal | high | urgent` (default `<DEFAULT_PRIORITY>`)
