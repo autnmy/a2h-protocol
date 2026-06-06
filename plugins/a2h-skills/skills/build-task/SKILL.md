@@ -82,8 +82,9 @@ description: Ask a human to perform a manual, out-of-band action via <APP>'s A2H
   - `verification` *(optional)*: how completion is confirmed
   - **`allowed_resolvers` (REQUIRED for a human task)**: list the **concrete human actor id(s)** allowed to
     complete it — e.g. `["human:alice"]` (format `<type>:<id>`; the Hub matches the resolver **exactly —
-    there is no wildcard**). If omitted it **fails closed to the submitting `agent.id` only** — so no human
-    can resolve the task and it sits unresolvable until it expires.
+    there is no wildcard**). If omitted it **fails closed to the submitting agent's own actor
+    `agent:<agent.id>` only** (resolvers compare in `<type>:<id>` form, not the raw id) — so no human can
+    resolve the task and it sits unresolvable until it expires.
   - `callback`: `{ "mode": "push", "url": "<CALLBACK_URL>", "auth": { "scheme": "<hmac|bearer|apikey>", "<secret_ref|token_ref>": "…" } }` — or `{ "mode": "pull" }`.
 - `state` *(optional)*: an **agent-sealed** (AEAD) resume blob; the Hub stores it opaquely.
 

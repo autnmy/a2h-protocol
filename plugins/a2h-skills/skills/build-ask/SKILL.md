@@ -94,7 +94,8 @@ description: Ask a human a decision via <APP>'s A2H Hub and route the signed ans
 - **`request.allowed_resolvers` (REQUIRED for a human decision)**: list the **concrete human actor id(s)**
   allowed to answer — e.g. `["human:alice"]` (format `<type>:<id>`, `type ∈ {human,agent,system}`; the Hub
   matches the authenticated resolver **exactly — there is no wildcard**). If omitted it **fails closed to
-  the submitting `agent.id` only** — so no human can resolve the ask and it sits unresolvable until it expires.
+  the submitting agent's own actor `agent:<agent.id>` only** (resolvers compare in `<type>:<id>` form, not
+  the raw id) — so no human can resolve the ask and it sits unresolvable until it expires.
 - `request.callback`: `{ "mode": "push", "url": "<CALLBACK_URL>", "auth": { "scheme": "<hmac|bearer|apikey>", "<secret_ref|token_ref>": "…" } }` — or `{ "mode": "pull" }`.
 - `state` *(optional)*: an **agent-sealed** (AEAD) resume blob. Seal it yourself; the Hub stores it opaquely.
 
