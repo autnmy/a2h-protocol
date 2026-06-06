@@ -101,7 +101,7 @@ test("agent cancels its own open ask -> cancelled, Response delivered like a res
 
   const resp = hub.cancel(ack.id, "deploybot/dev-team", T0 + 1_000);
   assert.equal(resp.resolution, "cancelled");
-  assert.equal(hub.get(ack.id)?.status, "cancelled");
+  assert.equal(hub.get(ack.id, "deploybot/dev-team")?.status, "cancelled");
   assert.ok(deliveries[0], "the cancelled Response is delivered so the agent gets closure");
 
   // Idempotent: a repeat cancel returns the same terminal outcome.
@@ -120,23 +120,42 @@ test("submitter-binding (§9.1): a foreign principal cannot cancel or poll anoth
     () => hub.cancel(ack.id, "evilbot/other", T0 + 1_000),
     (e: unknown) => e instanceof HubError && e.code === "not_found",
   );
-  // The ask is untouched: still open, still the submitter's to resolve/cancel.
-  assert.equal(hub.get(ack.id)?.status, "open");
-  // The same binding hides it from a foreign poll, but not from its submitter.
+  // The same binding hides it from a foreign poll, but not from its submitter — and the ask
+  // is untouched: still open, still the submitter's to resolve/cancel.
   assert.equal(hub.get(ack.id, "evilbot/other"), null);
   assert.equal(hub.get(ack.id, "deploybot/dev-team")?.status, "open");
 });
 
-test("cancel after a different terminal returns already_terminal (first-terminal-wins)", () => {
+test("cancel after a different terminal returns already_terminal carrying the existing outcome (§8.4 409)", () => {
   const sealKey = randomBytes(32);
   const hub = new Hub({ signingKey: SIGNING_KEY, now: () => T0 });
   const ack = hub.submit(makeAsk(sealKey, T0));
   hub.resolve(ack.id, { actor: "human:alice", resolution: "answered", value: "ship" }, T0 + 1_000);
   assert.throws(
     () => hub.cancel(ack.id, "deploybot/dev-team", T0 + 2_000),
-    (e: unknown) => e instanceof HubError && e.code === "already_terminal",
+    (e: unknown) =>
+      e instanceof HubError &&
+      e.code === "already_terminal" &&
+      // §8.4: the 409 carries the existing { id, status, resolution } so the agent reads the
+      // real outcome from the exception itself — no second lookup.
+      e.details?.id === ack.id &&
+      e.details?.status === "answered" &&
+      e.details?.resolution === "answered",
   );
-  assert.equal(hub.get(ack.id)?.status, "answered");
+  assert.equal(hub.get(ack.id, "deploybot/dev-team")?.status, "answered");
+});
+
+test("a cancel past expires_at loses to the default expiry, not cancelled (§7 expiry-vs-cancel)", () => {
+  const sealKey = randomBytes(32);
+  const hub = new Hub({ signingKey: SIGNING_KEY, now: () => T0 });
+  const ack = hub.submit(makeAsk(sealKey, T0)); // expires_at = T0 + 60_000, default_on_expire = "hold"
+  // The submitter cancels one ms after the deadline but before any expiry sweep ran. The ask
+  // expired at expires_at against the same clock, so the default outcome wins over cancel.
+  const resp = hub.cancel(ack.id, "deploybot/dev-team", T0 + 60_001);
+  assert.equal(resp.resolution, "expired");
+  assert.equal(resp.defaulted, true);
+  assert.equal(resp.response?.value, "hold");
+  assert.equal(hub.get(ack.id, "deploybot/dev-team")?.status, "expired");
 });
 
 test("notify is delivered on acceptance and durably pull-checkable", () => {
@@ -151,7 +170,7 @@ test("notify is delivered on acceptance and durably pull-checkable", () => {
   };
   const ack = hub.submit(notify);
   assert.equal(ack.status, "delivered");
-  const got = hub.get(ack.id);
+  const got = hub.get(ack.id, "deploybot/dev-team");
   assert.equal(got?.status, "delivered");
 });
 

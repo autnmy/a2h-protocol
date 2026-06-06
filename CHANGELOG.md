@@ -18,6 +18,10 @@ All notable changes to the A2H Protocol specification.
   non-submitting principal SHOULD see the id as unknown (`404`), so the binding doubles as an
   id-enumeration guard. §8.4 updated to match; conformance `pa-001` gains the assert and new
   `dp-002-cancel-submitter-binding` records the Hub's proof obligation; the reference Hub now enforces it.
+- **§7 makes the expiry-vs-cancel ordering explicit.** A cancel arriving strictly after `expires_at` loses
+  to `default_on_expire` against the same clock as expiry-vs-answer, so an overdue `ask` resolves to
+  `expired`, never `cancelled` — the reference Hub now applies the default-expiry precedence in `cancel()`
+  exactly as it already did in `resolve()`.
 
 ### Process
 - Added `CONTRIBUTING.md`, a spec-change-aware PR template, and an SCP (Spec Change Proposal) issue

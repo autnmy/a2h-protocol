@@ -26,6 +26,13 @@ export class HubError extends Error {
   constructor(
     public readonly code: string,
     message: string,
+    /**
+     * Structured body a transport wrapper serialises alongside the status code. For an
+     * `already_terminal` cancel this carries the existing `{ id, status, resolution }`
+     * the §8.4 `409` MUST return, so the agent reads the real outcome without a second
+     * lookup.
+     */
+    public readonly details?: JsonObject,
   ) {
     super(message);
     this.name = "HubError";
@@ -92,11 +99,17 @@ export class Hub {
     };
   }
 
-  get(id: string, principal?: string): GetResult {
+  /**
+   * Poll a message (§8.2). `principal` is the authenticated caller's `agent.id` and is
+   * REQUIRED: there is no unauthenticated poll in the protocol, so the submitter-binding
+   * (§9.1) cannot be bypassed by omitting it. To a non-submitting principal the message is
+   * invisible (`null`), indistinguishable from an unknown id — the same id-enumeration guard
+   * `cancel()` applies. The Hub reads its own internal state directly off `store`, never here.
+   */
+  get(id: string, principal: string): GetResult {
     const r = this.store.get(id);
     if (!r) return null;
-    // Poll binding (§9.1): to a non-submitting principal the message is invisible.
-    if (principal !== undefined && r.message.agent.id !== principal) return null;
+    if (r.message.agent.id !== principal) return null;
     return { ...r.message, id: r.id, status: r.status, ...(r.response ? { response: r.response } : {}) };
   }
 
@@ -107,7 +120,9 @@ export class Hub {
    * indistinguishable (`not_found`), which makes the binding an id-enumeration guard
    * and stops one agent from terminally withdrawing another's open ask. On success
    * the `cancelled` Response is emitted and delivered like a resolve (push and/or
-   * pull), so the agent still gets closure.
+   * pull), so the agent still gets closure. A cancel past `expires_at` loses to the
+   * default expiry (§7); a cancel after any *other* terminal throws `already_terminal`
+   * carrying the existing `{ id, status, resolution }` (§8.4 `409`).
    */
   cancel(id: string, principal: string, nowMs?: number): A2hResponse {
     const record = this.store.get(id);
@@ -117,15 +132,29 @@ export class Hub {
     if (record.message.type !== "ask") {
       throw new HubError("validation_error", "only an `ask` is cancellable in v0.2");
     }
+    const t = nowMs ?? this.now();
+    // Expiry-vs-cancel (§7): the ask conceptually expired at `expires_at`. A cancel arriving
+    // strictly after that loses to the default expiry against the same clock — exactly as a
+    // late resolve does (see `resolve`) — so an overdue ask resolves to `expired`/
+    // `default_on_expire`, never `cancelled`. Guarded on `open` so it never re-fires a
+    // terminal: an already-`cancelled` ask still re-cancels idempotently below.
+    if (record.status === "open" && record.expiresAtMs !== null && t > record.expiresAtMs) {
+      return this.applyDefaultExpiry(record, t);
+    }
     if (record.status !== "open") {
-      // first-terminal-wins: a prior terminal stands. A repeat cancel is idempotent;
-      // any other terminal is surfaced so the agent reads the real outcome.
+      // first-terminal-wins (§7): a prior terminal stands. A repeat cancel is idempotent;
+      // any other terminal is surfaced — with the existing `{ id, status, resolution }` the
+      // §8.4 `409` MUST carry — so the agent reads the real outcome, not a fake success.
       if (record.status !== "cancelled") {
-        throw new HubError("already_terminal", `message already ${record.status}`);
+        const existing = record.response as A2hResponse;
+        throw new HubError("already_terminal", `message already ${record.status}`, {
+          id: record.id,
+          status: record.status,
+          resolution: existing.resolution,
+        });
       }
       return record.response as A2hResponse;
     }
-    const t = nowMs ?? this.now();
     applyResolution(record, {
       resolution: "cancelled",
       actor: `agent:${record.message.agent.id}`,
