@@ -71,9 +71,11 @@ Compose and POST an A2H `notify` to <APP>'s Hub. Fire-and-forget — do not wait
 - `priority` *(optional)*: `low | normal | high | urgent` (default `<DEFAULT_PRIORITY>`)
 - `tags` *(optional)*: `string[]`
 
-Expect `202 { id, status: "delivered" }` (a `notify` submit ack is `delivered`, not `open` — there is no
-response leg). On non-2xx, surface the error. Do **not** blind-retry — `notify` has no idempotency key, so
-a retry creates a duplicate.
+Expect `202` with `{ id, status: "delivered", poll_url }` (a `notify` submit ack is `delivered`, not `open`
+— there is no response leg; `poll_url` is the canonical per-message GET URL). Fire-and-forget normally
+ignores `poll_url`; keep it only if you want the optional durability check (`GET` it to confirm the Hub
+persisted the notify). On non-2xx, surface the error. Do **not** blind-retry — `notify` has no idempotency
+key, so a retry creates a duplicate.
 
 > The `Authorization: Bearer` line below is the `bearer`-scheme example — for an `apikey` Hub, swap in its advertised API-key header.
 
