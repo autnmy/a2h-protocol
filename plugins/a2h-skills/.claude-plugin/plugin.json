@@ -4,9 +4,9 @@
   "version": "0.1.0",
   "author": {
     "name": "Autonomy",
-    "url": "https://a2hprotocol.org"
+    "url": "https://ahcpprotocol.org"
   },
-  "homepage": "https://a2hprotocol.org",
+  "homepage": "https://ahcpprotocol.org",
   "repository": "https://github.com/autnmy/a2h-protocol",
   "license": "Apache-2.0",
   "keywords": ["ahcp", "a2h", "agent-human-coordination", "human-in-the-loop", "notify", "ask", "task", "skill-generator"]
