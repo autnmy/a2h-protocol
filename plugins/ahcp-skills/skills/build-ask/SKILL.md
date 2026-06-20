@@ -18,7 +18,7 @@ leg**, which makes it the most involved verb. Get these right in the generated s
   `pull` (your agent polls the `poll_url` from the `202` ack and reads the terminal `response` embedded in
   the message body).
 - **Resume + verify** — the run may end; on the callback it is re-invoked. **Only pushed Responses are
-  signed** (`A2H-Signature: t=<unix>,jti=<nonce>,v1=<base64url(sig)>` — RFC 8785 JCS + detached
+  signed** (`AHCP-Signature: t=<unix>,jti=<nonce>,v1=<base64url(sig)>` — RFC 8785 JCS + detached
   HMAC-SHA256, ±120s window, bound to `id` + `resolution_id` + `callback_url` + **`payload_sha256`**, which
   binds the answer payload itself so a terminating proxy can't flip `response.value` (v0.3, §9.2)); a
   **pull** response is trusted via the authenticated GET transport + the immutable terminal record, with no
@@ -51,7 +51,7 @@ Inspect the repo (`AGENTS.md` / `CLAUDE.md` / `.env.example` / config), then ask
 ### 2. Generate the skill
 Write `<skills-dir>/<app>-ask/SKILL.md` from the template below. For verification + sealing, prefer a small
 helper that uses the AHCP reference primitives (`canonicalize`, `signing.verifyResponse`, `state-seal`) —
-see the [reference implementation](https://github.com/autnmy/a2h-protocol/tree/main/reference) — rather
+see the [reference implementation](https://github.com/autnmy/ahcp-protocol/tree/main/reference) — rather
 than re-deriving crypto.
 
 ### 3. Verify
@@ -68,8 +68,8 @@ If other people's agents should also send to this Hub, offer to package the gene
 at `<plugin-root>/skills/<app>-ask/SKILL.md` (move it there from `.claude/skills/`, or point the plugin's
 `skills` path at its location), then add `.claude-plugin/plugin.json` and a root
 `.claude-plugin/marketplace.json` listing it (bundle whichever verb skills the app exposes — notify/ask/task).
-Teammates run `/plugin marketplace add <this-repo>` → `/plugin install <app>-a2h@<marketplace>` and invoke
-it as `/<app>-a2h:<app>-ask` (plugin skills are namespaced `/<plugin>:<skill>`). Validate with `claude plugin validate .`.
+Teammates run `/plugin marketplace add <this-repo>` → `/plugin install <app>-ahcp@<marketplace>` and invoke
+it as `/<app>-ahcp:<app>-ask` (plugin skills are namespaced `/<plugin>:<skill>`). Validate with `claude plugin validate .`.
 
 ## Template — the generated `<app>-ask` skill
 
@@ -85,7 +85,7 @@ description: Ask a human a decision via <APP>'s AHCP Hub and route the signed an
 - **Endpoint:** `POST <HUB_URL>/v1/messages`  ·  **Auth:** the Hub's advertised scheme (capability `auth_schemes`) — `Authorization: Bearer $<AUTH_ENV>` for `bearer`, or the API-key header for `apikey`
 
 **Envelope** (`type: "ask"`):
-- `a2h_version`: `"0.3"`, `created_at`: ISO now
+- `ahcp_version`: `"0.3"`, `created_at`: ISO now
 - `agent`: `{ "id": "<AGENT_ID>", "run_id": "<RUN_ID>", "runtime": "<RUNTIME>", "project": "<PROJECT>" }`  *(every value is a JSON string — keep the quotes)*
 - `title`, `body` (Markdown), `priority?`, `tags?`
 - **`idempotency_key`** (REQUIRED): stable per logical request (e.g. a hash of the decision context).
@@ -119,9 +119,9 @@ Then **MUST**:
 1. **(push only) Verify** the signature: first **recompute `payload_sha256`** yourself as the lowercase-hex
    SHA-256 of the RFC 8785 JCS of the fixed-key object `{ "response": <received `response` or null>,
    "state": <received `state` or null> }` (v0.3, §9.2 — **never trust a transmitted digest**), then
-   reconstruct the canonical `signed_context` (`a2h_version, callback_url, id, in_reply_to, jti,
+   reconstruct the canonical `signed_context` (`ahcp_version, callback_url, id, in_reply_to, jti,
    payload_sha256, resolution, resolution_id, resolved_at, t`) and verify the detached
-   `A2H-Signature: t=<unix>,jti=<nonce>,v1=<base64url(sig)>` over its JCS with the Hub's **advertised
+   `AHCP-Signature: t=<unix>,jti=<nonce>,v1=<base64url(sig)>` over its JCS with the Hub's **advertised
    algorithm** (`hmac-sha256` with the per-agent key, or `ed25519` — see capability `signature_algs`), the
    `jti` nonce (not seen before), the ±120s window (`t`), and the binding to `id` + `resolution_id` +
    `callback_url` + `payload_sha256`. Reject on any mismatch. **Pull skips this step** — just read the
@@ -147,4 +147,4 @@ platform's ed25519 primitive, **not** that helper (it returns `alg not implement
 ## References
 - Spec: <https://ahcpprotocol.org/spec/v0.3.md> (§5 verbs, §6 response, §7 lifecycle, §9 security)
 - Schemas: <https://ahcpprotocol.org/schema/v0.3/message.schema.json> · <https://ahcpprotocol.org/schema/v0.3/response.schema.json>
-- Reference impl (verify/seal): <https://github.com/autnmy/a2h-protocol/tree/main/reference>
+- Reference impl (verify/seal): <https://github.com/autnmy/ahcp-protocol/tree/main/reference>

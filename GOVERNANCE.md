@@ -41,11 +41,11 @@ MCP's SEP process and IETF Internet-Drafts:
 2. Submit a PR against the spec **and** schema **and** at least one example.
 3. Maintainers review for: backward compatibility; reuse of established conventions over invention;
    minimalism (does the *core* need this, or is it a binding/extension?); and security/privacy impact.
-4. Breaking changes bump `a2h_version`.
+4. Breaking changes bump `ahcp_version`.
 
 ## 5. Versioning
 
-The protocol version is carried in every message as `a2h_version`. Before 1.0 the spec is a Draft and MAY
+The protocol version is carried in every message as `ahcp_version`. Before 1.0 the spec is a Draft and MAY
 change incompatibly between minor versions. 1.0 marks the first stability commitment.
 
 ## 6. Maintainers

@@ -8,6 +8,14 @@ Legend: **RENAME** = brand prose → AHCP · **REMOVE** = delete (internal/contr
 move to a more appropriate doc · **REWRITE** = reshape tone/content · **FREEZE** = must not change ·
 **FLAG** = needs out-of-band action (e.g. binary asset).
 
+> **Superseded by a later full rename (record kept for history).** This audit captures the *naming-only*
+> rebrand, which deliberately **froze** the `a2h` wire/distribution slug (see §4). A subsequent decision —
+> made because the protocol had **no external adopters** — lifted that freeze and flipped the entire `a2h`
+> identity to `ahcp`: the wire identifiers (`a2h_version` → `ahcp_version`, the signature header, etc.),
+> the schema `$id` domain, and the distribution names (npm / CLI / plugin / repo). The conformance vectors
+> were re-signed. The §4 "frozen" table below therefore records the rebrand-time state, **not** the final
+> state. See [MIGRATION.md](../MIGRATION.md) and the `CHANGELOG` "Complete rename" entry for the end state.
+
 ---
 
 ## 1. Internal-founder, commercial & brainstorming language

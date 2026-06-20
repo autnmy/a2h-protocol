@@ -22,8 +22,8 @@ Ordered from "first contact" to "deep implementation":
 | **4. Schemas** | Machine-readable message/response/ack/capability schemas. | `schema/v0.3/…`, `schema/v0.2/…`, `schema/v0.1/…` | ✅ present |
 | **5. Examples** | Concrete envelopes for every verb + responses + the resume callback. | `examples/` | ✅ present |
 | **6. Conformance** | Vector format, verification classes, proof obligations. | `conformance/` | ✅ present |
-| **7. Reference implementation** | Vendor-neutral implementation + `a2h` CLI. | `reference/` | ✅ present |
-| **8. Adoption / integration** | How to implement a Hub or wire an agent (the plugin). | `plugins/a2h-skills/` | ✅ present |
+| **7. Reference implementation** | Vendor-neutral implementation + `ahcp` CLI. | `reference/` | ✅ present |
+| **8. Adoption / integration** | How to implement a Hub or wire an agent (the plugin). | `plugins/ahcp-skills/` | ✅ present |
 | **9. Migration** | Version-to-version and naming changes. | `CHANGELOG.md`, `MIGRATION.md` | ✅ present |
 | **10. Governance / contributing** | Stewardship, protocol-vs-product, spec-change process, license. | `GOVERNANCE.md`, `CONTRIBUTING.md`, `NOTICE`, `LICENSE` | ✅ present |
 | **11. Working notes** | Internal plans, audits, advisory reviews. | `docs/plans/`, `docs/ahcp-rebrand-audit.md`, this file | ✅ present |
@@ -47,7 +47,7 @@ schema/  v0.3/  v0.2/  v0.1/
 examples/
 conformance/
 reference/
-plugins/a2h-skills/
+plugins/ahcp-skills/
 docs/
   concepts.md                     ← (optional) if README's concepts outgrow it
   spec-improvement-recommendations.md

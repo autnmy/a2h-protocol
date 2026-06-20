@@ -120,7 +120,7 @@ See [`spec/v0.3.md` §11](spec/v0.3.md) for full provenance.
 
 ```
 README.md                          ← you are here
-MIGRATION.md                       ← A2H → AHCP naming change (no wire change)
+MIGRATION.md                       ← A2H → AHCP complete rename (brand + wire + distribution)
 CHANGELOG.md                       ← version history and migration notes
 spec/v0.3.md                       ← the normative specification (current draft)
 spec/v0.2.md                       ← superseded draft (kept for history)
@@ -130,22 +130,18 @@ schema/v0.3/
   response.schema.json             ← return leg (Hub → agent)
   submit-ack.schema.json           ← 202 ack body
   get-message.schema.json          ← GET /v1/messages/{id} body
-  capability.schema.json           ← GET /.well-known/a2h discovery doc
+  capability.schema.json           ← GET /.well-known/ahcp discovery doc
 examples/                          ← concrete envelopes (notify/ask/task + responses + the resume callback)
 conformance/                       ← vector format, the verification classes, starter vectors
-reference/                         ← @a2h/reference — vendor-neutral TypeScript reference impl + `a2h` CLI
-plugins/a2h-skills/                ← installable plugin: implement a Hub + build notify/ask/task skills
+reference/                         ← @ahcp/reference — vendor-neutral TypeScript reference impl + `ahcp` CLI
+plugins/ahcp-skills/                ← installable plugin: implement a Hub + build notify/ask/task skills
 ```
-
-> **Naming note:** the protocol is named **AHCP**, but its on-the-wire and distribution identifiers
-> retain the stable `a2h` slug (`a2h_version`, `/.well-known/a2h`, `@a2h/reference`, the `a2h` CLI, the
-> `a2h-skills` plugin). The slug is frozen for compatibility; see [MIGRATION.md](MIGRATION.md).
 
 ## Conformance
 
 An implementation is conformant if it satisfies the normative requirements in `spec/v0.3.md` and the
 proof obligations in `conformance/`. The `reference/` TypeScript implementation and the vectors in
-`conformance/vectors/` define the interoperability baseline; the `a2h` CLI can validate, sign, and
+`conformance/vectors/` define the interoperability baseline; the `ahcp` CLI can validate, sign, and
 verify messages against the schemas.
 
 ## The name

@@ -13,26 +13,26 @@ keywords are used throughout. The items below are refinements, not corrections.
 
 ---
 
-## R1 — Document the AHCP-brand ↔ `a2h`-slug split in the spec (highest value)
+## R1 — Document that the `ahcp` wire identifiers are frozen going forward (highest value)
 
-**Observation.** After the rebrand the protocol is named **AHCP**, but the wire identifiers retain the
-frozen `a2h` slug: the `a2h_version` field (§10), the `A2H-Signature` header (§9.2), the
-`A2H_CALLBACK_SECRET` convention (§8.3), the `/.well-known/a2h` discovery path (§8.0), and the
-`x-a2h-sensitive` schema extension. A future editor doing a "consistency cleanup" could rename one of
-these to match the brand and **unknowingly ship a breaking change** (it would change the signed bytes /
-discovery path / field name and break every existing implementation and conformance vector).
+**Observation.** The protocol identity is now uniformly `ahcp` — the `a2h` slug was fully retired in the
+pre-1.0 rename (see `MIGRATION.md`), so the earlier brand↔slug *split* this section once flagged no longer
+exists. What remains worth protecting is the same hazard in the new identity: a future "consistency
+cleanup" could rename a wire identifier (`ahcp_version`, the `AHCP-Signature` header, `AHCP_CALLBACK_SECRET`,
+`/.well-known/ahcp`, `x-ahcp-sensitive`) or the schema `$id` host and **unknowingly ship a breaking
+change** — changing the signed bytes / discovery path / field name and breaking every implementation and
+conformance vector.
 
 **Recommendation.** Add a single non-normative note near §1 or §10:
 
-> *Naming note: this protocol is named **AHCP (Agent Human Coordination Protocol)**. Its on-the-wire
-> identifiers — `a2h_version`, the `A2H-Signature` header, `A2H_CALLBACK_SECRET`, `/.well-known/a2h`, and
-> `x-a2h-sensitive` — retain the frozen `a2h` slug for compatibility and MUST NOT be renamed without a
-> major version bump. The schema `$id` host is `ahcpprotocol.org` (migrated from `a2hprotocol.org`
-> pre-1.0; see CHANGELOG), with `a2hprotocol.org` kept as a redirect.*
+> *Frozen identifiers: the wire identifiers — `ahcp_version`, the `AHCP-Signature` header,
+> `AHCP_CALLBACK_SECRET`, `/.well-known/ahcp`, `x-ahcp-sensitive` — and the schema `$id` host
+> `ahcpprotocol.org` are part of the interoperability contract and MUST NOT be renamed without a major
+> version bump.*
 
-This is a clarity addition (no wire change). It is already documented in `MIGRATION.md`; mirroring it in
-the spec protects the normative source directly. **Out of scope to apply in a naming-only change** —
-recommended for the next spec touch.
+This is a clarity addition (no wire change). The CI `scripts/check-frozen-identifiers.sh` guard already
+enforces it mechanically; mirroring it in the spec protects the normative source directly. **Recommended
+for the next spec touch.**
 
 ---
 

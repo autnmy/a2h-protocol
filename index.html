@@ -64,7 +64,7 @@
       "@type": "SoftwareSourceCode",
       "name": "AHCP",
       "description": "Open specification, JSON Schema, conformance vectors, and TypeScript reference implementation for the Agent Human Coordination Protocol.",
-      "codeRepository": "https://github.com/autnmy/a2h-protocol",
+      "codeRepository": "https://github.com/autnmy/ahcp-protocol",
       "programmingLanguage": ["JSON Schema", "TypeScript"],
       "license": "https://www.apache.org/licenses/LICENSE-2.0"
     }
@@ -210,8 +210,8 @@
   <div class="bar"><span class="dots"><i></i><i></i><i></i></span><span class="name">AHCP — Agent Human Coordination Protocol</span><span></span></div>
   <div class="screen" id="screen">
 
-    <section class="step" data-cmd="a2h about">
-      <div class="cmdline"><span class="p">~/a2h</span> <span class="car">❯</span> <span class="cmd">a2h about</span></div>
+    <section class="step" data-cmd="ahcp about">
+      <div class="cmdline"><span class="p">~/ahcp</span> <span class="car">❯</span> <span class="cmd">ahcp about</span></div>
       <div class="out lead">
         <h1 class="mark">AHCP<span class="vh"> — Agent Human Coordination Protocol</span></h1>
         <p class="tag">A vendor- and runtime-neutral protocol for <b>human coordination across an agent fleet</b> — many agents, one hub. Agents notify, ask, and hand off tasks; humans coordinate from one place.</p>
@@ -224,8 +224,8 @@ agent ┘
       </div>
     </section>
 
-    <section class="step" data-cmd="a2h verbs">
-      <div class="cmdline"><span class="p">~/a2h</span> <span class="car">❯</span> <span class="cmd">a2h verbs</span></div>
+    <section class="step" data-cmd="ahcp verbs">
+      <div class="cmdline"><span class="p">~/ahcp</span> <span class="car">❯</span> <span class="cmd">ahcp verbs</span></div>
       <div class="out">
         <h2 class="vh">The three verbs</h2>
         <dl class="verb">
@@ -237,7 +237,7 @@ agent ┘
     </section>
 
     <section class="step" data-cmd="npm run demo" data-stream="1">
-      <div class="cmdline"><span class="p">~/a2h</span> <span class="car">❯</span> <span class="cmd">npm run demo</span><span class="cmt"> # you are the human in the loop</span></div>
+      <div class="cmdline"><span class="p">~/ahcp</span> <span class="car">❯</span> <span class="cmd">npm run demo</span><span class="cmt"> # you are the human in the loop</span></div>
       <div class="out">
         <h2 class="vh">A human-in-the-loop demo</h2>
         <div class="tl"><span class="cy">📬</span>  notify → "Daily deploy digest — web-app"   <span class="faint">[durable · status=delivered]</span></div>
@@ -253,28 +253,28 @@ agent ┘
       </div>
     </section>
 
-    <section class="step" data-cmd="a2h docs">
-      <div class="cmdline"><span class="p">~/a2h</span> <span class="car">❯</span> <span class="cmd">a2h docs</span></div>
+    <section class="step" data-cmd="ahcp docs">
+      <div class="cmdline"><span class="p">~/ahcp</span> <span class="car">❯</span> <span class="cmd">ahcp docs</span></div>
       <div class="out">
         <h2 class="vh">Documentation</h2>
         <nav class="links" aria-label="AHCP documentation">
-          <a class="lk" href="https://github.com/autnmy/a2h-protocol/blob/main/spec/v0.3.md"><span class="k">spec</span><span class="d">the normative v0.3 specification</span></a>
-          <a class="lk" href="https://github.com/autnmy/a2h-protocol/tree/main/plugins/a2h-skills"><span class="k">plugin</span><span class="d">agent-native skills — implement a Hub, build notify/ask/task</span></a>
-          <a class="lk" href="https://github.com/autnmy/a2h-protocol/tree/main/reference"><span class="k">reference</span><span class="d">strict-TypeScript implementation + a2h CLI</span></a>
+          <a class="lk" href="https://github.com/autnmy/ahcp-protocol/blob/main/spec/v0.3.md"><span class="k">spec</span><span class="d">the normative v0.3 specification</span></a>
+          <a class="lk" href="https://github.com/autnmy/ahcp-protocol/tree/main/plugins/ahcp-skills"><span class="k">plugin</span><span class="d">agent-native skills — implement a Hub, build notify/ask/task</span></a>
+          <a class="lk" href="https://github.com/autnmy/ahcp-protocol/tree/main/reference"><span class="k">reference</span><span class="d">strict-TypeScript implementation + ahcp CLI</span></a>
           <a class="lk" href="/schema/v0.3/message.schema.json"><span class="k">schemas</span><span class="d">JSON Schema 2020-12 · dereferenceable here</span></a>
-          <a class="lk" href="https://github.com/autnmy/a2h-protocol/tree/main/conformance"><span class="k">conformance</span><span class="d">vectors + downstream proof obligations</span></a>
-          <a class="lk" href="https://github.com/autnmy/a2h-protocol"><span class="k">repo</span><span class="d">github.com/autnmy/a2h-protocol</span></a>
+          <a class="lk" href="https://github.com/autnmy/ahcp-protocol/tree/main/conformance"><span class="k">conformance</span><span class="d">vectors + downstream proof obligations</span></a>
+          <a class="lk" href="https://github.com/autnmy/ahcp-protocol"><span class="k">repo</span><span class="d">github.com/autnmy/ahcp-protocol</span></a>
         </nav>
       </div>
     </section>
 
-    <section class="step" data-cmd="a2h skills">
-      <div class="cmdline"><span class="p">~/a2h</span> <span class="car">❯</span> <span class="cmd">a2h skills</span></div>
+    <section class="step" data-cmd="ahcp skills">
+      <div class="cmdline"><span class="p">~/ahcp</span> <span class="car">❯</span> <span class="cmd">ahcp skills</span></div>
       <div class="out">
         <h2 class="vh">Agent-native skills</h2>
         <p class="tag">Adopt AHCP from your agent — <b>install the plugin, then build</b>:</p>
-        <pre class="map"><span class="faint">/plugin marketplace add</span> autnmy/a2h-protocol
-<span class="faint">/plugin install</span> a2h-skills@a2h</pre>
+        <pre class="map"><span class="faint">/plugin marketplace add</span> autnmy/ahcp-protocol
+<span class="faint">/plugin install</span> ahcp-skills@ahcp</pre>
         <dl class="verb toolkit">
           <dt>implement</dt><dd>build a conformant AHCP <b>Hub</b> in your app — any language or framework</dd>
           <dt>build-notify</dt><dd>generate your app's <b>notify</b> sender skill</dd>
@@ -284,8 +284,8 @@ agent ┘
       </div>
     </section>
 
-    <section class="step" data-cmd="a2h rules">
-      <div class="cmdline"><span class="p">~/a2h</span> <span class="car">❯</span> <span class="cmd">a2h rules</span></div>
+    <section class="step" data-cmd="ahcp rules">
+      <div class="cmdline"><span class="p">~/ahcp</span> <span class="car">❯</span> <span class="cmd">ahcp rules</span></div>
       <div class="out">
         <h2 class="vh">Trust rules</h2>
         <ul class="rules">
@@ -324,12 +324,12 @@ agent ┘
   var OUTPUTS = {};
   stepEls.forEach(function(s){ var out=s.querySelector('.out'); OUTPUTS[s.getAttribute('data-cmd')] = out ? out.innerHTML : ''; });
   var HELP = [
-    'a2h about        what AHCP is, in one screen',
-    'a2h verbs        the three message verbs',
-    'a2h docs         links to the spec, skill, schemas, repo',
-    'a2h rules        the trust rules that matter',
-    'a2h skills       install the plugin — implement a Hub, build verb skills',
-    'a2h run-vectors  run the conformance vectors',
+    'ahcp about        what AHCP is, in one screen',
+    'ahcp verbs        the three message verbs',
+    'ahcp docs         links to the spec, skill, schemas, repo',
+    'ahcp rules        the trust rules that matter',
+    'ahcp skills       install the plugin — implement a Hub, build verb skills',
+    'ahcp run-vectors  run the conformance vectors',
     'npm run demo     replay the human-in-the-loop demo',
     'clear            clear the screen'
   ].map(function(l){ return '<div class="tl"><span class="faint">'+esc(l)+'</span></div>'; }).join('');
@@ -389,7 +389,7 @@ agent ┘
   function onKey(e){ if(e.key==='Enter'){ e.preventDefault(); submit(); } }
   function addPrompt(gap){
     var row = el('row'); if(gap) row.style.marginTop = gap+'px';
-    row.innerHTML = '<span class="p">~/a2h</span> <span class="car">❯</span> <span class="in" contenteditable="true" spellcheck="false" autocapitalize="off" autocorrect="off"></span><span class="cur"></span>';
+    row.innerHTML = '<span class="p">~/ahcp</span> <span class="car">❯</span> <span class="in" contenteditable="true" spellcheck="false" autocapitalize="off" autocorrect="off"></span><span class="cur"></span>';
     screen.appendChild(row); autoscroll();
     current = row.querySelector('.in');
     current.addEventListener('keydown', onKey);
@@ -399,10 +399,10 @@ agent ┘
   function resolve(t){
     if(!t) return null;
     if(t==='clear') return { clear:true };
-    if(t==='help' || t==='a2h' || t==='a2h help' || t==='a2h --help') return { html:HELP };
+    if(t==='help' || t==='ahcp' || t==='ahcp help' || t==='ahcp --help') return { html:HELP };
     if(OUTPUTS.hasOwnProperty(t)) return { html:OUTPUTS[t] };
-    if(t==='a2h run-vectors' || t==='a2h vectors') return { html:'<div class="tl"><span class="cy">8 passed</span> · 0 failed · <span class="faint">1 skipped</span></div>' };
-    if(/^a2h (validate|sign|verify)\b/.test(t)) return { html:'<div class="tl"><span class="faint">usage:</span> '+esc(t.split(' ').slice(0,2).join(' '))+' … run it in the reference → github.com/autnmy/a2h-protocol</div>' };
+    if(t==='ahcp run-vectors' || t==='ahcp vectors') return { html:'<div class="tl"><span class="cy">8 passed</span> · 0 failed · <span class="faint">1 skipped</span></div>' };
+    if(/^ahcp (validate|sign|verify)\b/.test(t)) return { html:'<div class="tl"><span class="faint">usage:</span> '+esc(t.split(' ').slice(0,2).join(' '))+' … run it in the reference → github.com/autnmy/ahcp-protocol</div>' };
     return { html:'<div class="tl"><span class="am">command not found:</span> '+esc(t)+'</div>' };
   }
   async function submit(){
@@ -418,7 +418,7 @@ agent ┘
   }
   function startInteractive(){
     removeCue();
-    screen.appendChild(el('tl', '<span class="faint"># your turn — try: a2h rules · a2h docs · npm run demo · help</span>'));
+    screen.appendChild(el('tl', '<span class="faint"># your turn — try: ahcp rules · ahcp docs · npm run demo · help</span>'));
     addPrompt(40);
   }
   document.getElementById('win').addEventListener('click', function(e){

@@ -26,8 +26,8 @@ Your definition of done is **conformance**, not a copied reference implementatio
 Read these before writing code — they are the source of truth:
 - **Spec:** <https://ahcpprotocol.org/spec/v0.3.md> (§5 verbs · §6 response · §7 lifecycle · §8 transport · §9 security)
 - **Schemas:** <https://ahcpprotocol.org/schema/v0.3/message.schema.json> · `response.schema.json` · `capability.schema.json` · `submit-ack.schema.json` · `get-message.schema.json`
-- **Reference impl** (the crypto/lifecycle, to mirror — see §3): <https://github.com/autnmy/a2h-protocol/tree/main/reference>
-- **Conformance vectors** (your tests): <https://github.com/autnmy/a2h-protocol/tree/main/conformance>
+- **Reference impl** (the crypto/lifecycle, to mirror — see §3): <https://github.com/autnmy/ahcp-protocol/tree/main/reference>
+- **Conformance vectors** (your tests): <https://github.com/autnmy/ahcp-protocol/tree/main/conformance>
 
 ## 1. Understand the project
 
@@ -48,7 +48,7 @@ Implement these over **HTTPS only** (plaintext MUST NOT be offered, §8). Paths 
 | GET | `/v1/messages` · `/v1/messages/{id}` | inbox read; reads are **idempotent**; **pull-mode** clients read the terminal Response **embedded in the message body** of `GET /v1/messages/{id}` — trusted via the authenticated GET transport, **not signed** |
 | POST | `/v1/messages/{id}/resolve` | a human resolves an `ask`/`task` → triggers the signed response |
 | POST | `/v1/messages/{id}/cancel` | the agent withdraws an open `ask` → terminal `cancelled`, which **emits a terminal Response** delivered like a resolve (push and/or embedded for pull) so the agent gets closure |
-| GET | `/.well-known/a2h` | advertise limits + supported auth schemes (standardized discovery) |
+| GET | `/.well-known/ahcp` | advertise limits + supported auth schemes (standardized discovery) |
 | GET | `/v1/stream` *(optional)* | SSE live tail for a live inbox |
 
 ## 3. The Hub MUSTs — your definition of done
@@ -60,7 +60,7 @@ implementation is done when each MUST below holds **and** the vectors pass.
 - [ ] **`id` is Hub-assigned**, never a client input. Clients correlate via `client_ref` (opaque; never a dedup key; never shown to resolvers).
 - [ ] **Idempotency:** `idempotency_key` is **required** for `ask`/`task`; dedup scope `(agent.id, idempotency_key)` → a retry with an **identical payload** returns the same `id`, never a second row/decision. Reusing the **same key with a different payload** MUST return **`409 Conflict`** (never silently the original `id`).
 - [ ] **`state` is agent-owned + sealed:** opaque AEAD blob; the **Hub MUST NOT inspect, log, or hold the key**; returned **verbatim** on resolution.
-- [ ] **Every pushed Response is signed:** RFC 8785 **JCS** over the `signed_context` + a **detached signature** — `hmac-sha256`, or `ed25519` if the Hub advertises it in capability `signature_algs` (§9.2) — with a `jti` nonce, a ±120s window, and binding to `id` + `resolution_id` + `callback_url` + **`payload_sha256`** (v0.3 binds the response payload — the lowercase-hex SHA-256 of the JCS of `{ response, state }` — so a terminating proxy can't flip `response.value`; §9.2). Because this signature break is at the **push** leg, a Hub MUST reject a **push** callback requested at a **pre-0.3** `a2h_version` with `version_not_supported` (pull stays compatible; §10).
+- [ ] **Every pushed Response is signed:** RFC 8785 **JCS** over the `signed_context` + a **detached signature** — `hmac-sha256`, or `ed25519` if the Hub advertises it in capability `signature_algs` (§9.2) — with a `jti` nonce, a ±120s window, and binding to `id` + `resolution_id` + `callback_url` + **`payload_sha256`** (v0.3 binds the response payload — the lowercase-hex SHA-256 of the JCS of `{ response, state }` — so a terminating proxy can't flip `response.value`; §9.2). Because this signature break is at the **push** leg, a Hub MUST reject a **push** callback requested at a **pre-0.3** `ahcp_version` with `version_not_supported` (pull stays compatible; §10).
 - [ ] **`actor` is Hub-attested** from the authenticated session — never the resolving request body; format `<type>:<id>`, `type ∈ {human, agent, system}`.
 - [ ] **Resolver authz is fail-closed** (`allowed_resolvers` absent ⇒ only the submitting agent's actor **`agent:<agent.id>`** may resolve — actors compare in `<type>:<id>` form, never the raw id).
 - [ ] **Request-leg auth** (§9.1): the agent credential is scoped to one `agent.id` — **reject an envelope whose `agent.id` ≠ the credential (`403`)**, and **bind each message's poll, callback, AND cancel access to the submitting principal** (one agent must not read — or `POST /v1/messages/{id}/cancel` to terminally withdraw — another's message by `id`); `run_id` is opaque and **MUST NOT** authorize cross-run access.
@@ -69,14 +69,14 @@ implementation is done when each MUST below holds **and** the vectors pass.
 - [ ] **Expiry & defaults** (§7, §8.5): reject `expires_at` not in the future at submit (`422`); **validate `default_on_expire` at submit** — a member of `options[].value` for `select`, an object matching the `input` schema, or `null` — and reject a bad default with `422` **up front** (never defer the error to expiry); when `expires_at` passes with no human action, auto-resolve `expired` — for `ask`, apply `default_on_expire` as a Response with `defaulted: true` and `actor: "system:default_on_expire"`; `task` has no default (bare `expired`).
 - [ ] **Durable persistence** (§3.1): a Hub process restart **MUST NOT** lose open asks/tasks, delivered notifies, committed resolutions, or pending push-delivery obligations. **In-memory-only storage is non-conformant** — back the lifecycle with a real store and add a restart test.
 - [ ] **`body` is untrusted Markdown** — sanitize to a **no-raw-HTML** profile **and do not auto-fetch remote images** (disable or proxy `![](http…)`) before any rendering, so rendering can't leak the resolver's IP/network info (§9.6).
-- [ ] **Telemetry/logs exclude** `state`, `body`, `context`, `response.value`, `response.comment` — `state` is a hard **MUST NOT log**. Also exclude any value marked **`x-a2h-sensitive: true`** (an `input`-schema property) or under a message-level **`sensitive: true`**, wherever it is nested.
+- [ ] **Telemetry/logs exclude** `state`, `body`, `context`, `response.value`, `response.comment` — `state` is a hard **MUST NOT log**. Also exclude any value marked **`x-ahcp-sensitive: true`** (an `input`-schema property) or under a message-level **`sensitive: true`**, wherever it is nested.
 - [ ] **Capability discovery** advertises `max_body_bytes` / `max_part_bytes` / `max_context_parts` / auth schemes, and the Hub **enforces** those limits at ingest.
 - [ ] **Submit returns `202`; GET reads are idempotent** (a terminal message returns the same body), and a **resolved message stays pull-available for the advertised retention TTL** (§8.2, RECOMMENDED 30 days) — do **not** purge terminal records at resolution, or a pull-only / missed-push agent's `poll_url` `404`/`410`s before it reads the embedded Response (a **deleted** message returns `410 Gone`; an **unknown** id `404`).
 
 ## 4. Do not hand-roll the crypto
 
 JCS canonicalization, the detached HMAC signature, and the AEAD state-seal are exact and easy to get
-subtly wrong. **Port or mirror the [reference primitives](https://github.com/autnmy/a2h-protocol/tree/main/reference)**
+subtly wrong. **Port or mirror the [reference primitives](https://github.com/autnmy/ahcp-protocol/tree/main/reference)**
 (`canonicalize`, `signing`, `state-seal`, `lifecycle`) into the project's language, matching their
 algorithms byte-for-byte — then prove it with the `dp-001` signature vector. Never invent your own framing.
 
@@ -104,4 +104,4 @@ Tell the implementer: the Hub is up at `<base-url>` with `<auth>`. **To let agen
 ## References
 - AHCP: <https://ahcpprotocol.org> · Spec: <https://ahcpprotocol.org/spec/v0.3.md>
 - Schemas: <https://ahcpprotocol.org/schema/v0.3/message.schema.json>
-- Reference impl + conformance: <https://github.com/autnmy/a2h-protocol/tree/main/reference> · <https://github.com/autnmy/a2h-protocol/tree/main/conformance>
+- Reference impl + conformance: <https://github.com/autnmy/ahcp-protocol/tree/main/reference> · <https://github.com/autnmy/ahcp-protocol/tree/main/conformance>

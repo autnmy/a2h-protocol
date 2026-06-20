@@ -1,5 +1,5 @@
 {
-  "name": "a2h",
+  "name": "ahcp",
   "metadata": {
     "description": "Agent-native skills for AHCP (the Agent Human Coordination Protocol) — build app-specific notify / ask / task skills wired to your AHCP Hub.",
     "version": "0.1.0"
@@ -10,8 +10,8 @@
   },
   "plugins": [
     {
-      "name": "a2h-skills",
-      "source": "./plugins/a2h-skills",
+      "name": "ahcp-skills",
+      "source": "./plugins/ahcp-skills",
       "description": "Agent-native AHCP toolkit: 'implement' builds a conformant AHCP Hub in your app (any stack); 'build-notify' / 'build-ask' / 'build-task' generate app-specific sender skills. Independent — use only what you need."
     }
   ]
