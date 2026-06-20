@@ -1,6 +1,6 @@
 ---
 title: "refactor: AHCP rebrand & specification overhaul (A2H → AHCP)"
-status: active
+status: completed
 date: 2026-06-20
 type: refactor
 origin: none (direct request via /compound-engineering:lfg)
