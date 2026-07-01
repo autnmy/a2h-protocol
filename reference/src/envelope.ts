@@ -30,6 +30,8 @@ const SCHEMA_FILES = [
   "get-message.schema.json",
   "capability.schema.json",
   "inbound-message.schema.json",
+  "ack.schema.json",
+  "presence.schema.json",
 ] as const;
 const BASE = "https://ma2h.org/schema/v0.4/";
 
@@ -63,3 +65,11 @@ export const validateCapability = (data: unknown): ValidationResult =>
 /** Validate a human→agent directive envelope (spec §13.1, v0.4). */
 export const validateInboundMessage = (data: unknown): ValidationResult =>
   runValidator(BASE + "inbound-message.schema.json", data);
+
+/** Validate an acknowledgment/receipt envelope (spec §14.1, v0.4). */
+export const validateAck = (data: unknown): ValidationResult =>
+  runValidator(BASE + "ack.schema.json", data);
+
+/** Validate a presence read body (spec §15.3, v0.4). */
+export const validatePresence = (data: unknown): ValidationResult =>
+  runValidator(BASE + "presence.schema.json", data);

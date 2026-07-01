@@ -14,6 +14,20 @@
     "response": {
       "$ref": "https://ma2h.org/schema/v0.4/response.schema.json",
       "description": "Present once the message is terminal (ask/task). Embeds the full Response envelope."
+    },
+    "delivery": {
+      "type": "object",
+      "description": "Additive receipt track (v0.4, spec §14.2), orthogonal to `status`/`response`. Present on a Hub offering the ack primitive; the human reads it to see whether the agent got and acknowledged the answer.",
+      "required": ["state"],
+      "properties": {
+        "state": { "enum": ["queued", "delivered", "delivered-to-agent", "acknowledged"] },
+        "delivered_at": { "type": "string", "format": "date-time", "description": "When the receiving party got the message (directive drained, or Response push-2xx / agent GET)." },
+        "acknowledged_at": { "type": "string", "format": "date-time" },
+        "ack": {
+          "$ref": "https://ma2h.org/schema/v0.4/ack.schema.json",
+          "description": "The ack envelope, present once state is `acknowledged`."
+        }
+      }
     }
   }
 }
