@@ -44,7 +44,7 @@ pnpm dlx ajv-cli@5 validate \
   -d <input.json>
 ```
 
-or load all six schemas into any Draft 2020-12 validator and check each vector's `input` against its
+or load all eight schemas into any Draft 2020-12 validator and check each vector's `input` against its
 `target`, asserting the declared `expect`.
 
 ## Downstream proof obligations (the Hub must discharge)
@@ -80,7 +80,17 @@ or load all six schemas into any Draft 2020-12 validator and check each vector's
 10. **Mailbox delivery semantics** (`dp-007`) — at-least-once + explicit consume/ack + `id` dedup +
     submitter-bound isolation + durability across restart (§8.7 / §13). Behavioural; proven against the
     Hub + its consuming agent (not executable from a JSON fixture — see the reference `inbound.test.ts`).
+11. **Ack signature** (`dp-008`) — the §14.4 pushed-ack signature: reproduce `v1` from
+    JCS(`ack_signed_context`) + HMAC-SHA256, and recompute `ack_sha256` from the `ack`. (Pulled acks are
+    transport-trusted and unsigned; v0.4.)
+12. **Ack tamper rejection** (`dp-009`) — the human's client recomputes `ack_sha256` from the received ack;
+    an altered `note`/`by` fails verification with a signature mismatch (§14.4).
+13. **Ack + presence behaviour** (`dp-010`) — ack terminal-once + submitter-bound + directive-consume-fold +
+    the delivery track; presence derivation, states, and owner-only read (§14/§15). Behavioural; exercised
+    by the reference `ack.test.ts` / `presence.test.ts`.
 
 The **schema-validation** class also gains the inbound envelope: `sv-008` (valid directive), `sv-009`
 (missing `to`), `sv-010` (a non-`human`/`system` `from`), `sv-011` (cross-type `request` rejected), `sv-012`
-(a pre-0.4 `ma2h_version` rejected — directives are a v0.4 feature).
+(a pre-0.4 `ma2h_version` rejected — directives are a v0.4 feature); and the cross-cutting primitives:
+`sv-013` (valid ack), `sv-014` (pre-0.4 ack rejected), `sv-015` (valid presence), `sv-016` (bad presence
+state rejected).

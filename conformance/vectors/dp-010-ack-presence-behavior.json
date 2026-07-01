@@ -1,0 +1,7 @@
+{
+  "id": "dp-010-ack-presence-behavior",
+  "class": "downstream-proof",
+  "description": "Behavioural obligations for the ack (§14) + presence (§15) primitives — semantics a JSON Schema cannot check; proven against a conformant Hub + its consuming agent (exercised by the reference ack.test.ts / presence.test.ts).",
+  "ref": "spec §14.2, §14.3, §15",
+  "obligation": "ACK (§14): (1) Terminal-once — the FIRST ack for an `in_reply_to` wins and is immutable; a repeat returns the existing ack. (2) Submitter-bound — only the submitting agent may `POST /v1/messages/{id}/ack` its response; a foreign/unknown id is `not_found`; acking an `open` (non-terminal) message is refused. (3) Directive receipt folds into the mailbox consume — `POST /v1/inbox/ack` with an optional `note` both consumes and acknowledges. (4) Delivery track — orthogonal to the §7 `resolution`: directive queued→delivered(drained)→acknowledged; ask/task answered→delivered-to-agent(push 2xx or the agent's authenticated GET)→acknowledged. PRESENCE (§15): (5) `last_seen` is derived from the agent's authenticated poll/long-poll/SSE activity (no heartbeat); state is `online` within the freshness window, `offline` when stale, `unknown` when never seen. (6) Owner-only — only the human whose account the agent belongs to may read presence; a non-owned/unknown agent reads as `unknown`, never leaking activity timing."
+}

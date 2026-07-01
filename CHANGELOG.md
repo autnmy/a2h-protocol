@@ -4,6 +4,23 @@ All notable changes to the MA2H (Multi-agent to Human Protocol) specification.
 
 ## Unreleased
 
+### Added (v0.4 — cross-cutting acknowledgment + presence primitives, §14/§15) — SCP #21
+Two primitives that enrich **both** directions (the shipped v0.3 response leg *and* the new inbound leg),
+modeled once and applied to each — additive, non-breaking, capability-advertised:
+- **Acknowledgment / receipt** (§14) — a terminal receipt the receiving party posts (agent: *"got it, on
+  it"* / *"got your Ship it — resuming"*). One shared `ack` envelope (`schema/v0.4/ack.schema.json`) +
+  `acknowledged` status; resource-scoped transport (response leg `POST /v1/messages/{id}/ack`; directive
+  receipt folds into `POST /v1/inbox/ack` via an optional `note`). Additive **delivery** track orthogonal to
+  the §7 `resolution` (directive `queued→delivered→acknowledged`; ask/task
+  `answered→delivered-to-agent→acknowledged`), surfaced on the GET body. Trust = §6 response-leg parity:
+  pull transport-trusted; a **pushed** ack is signed per §14.4 (`ack_signed_context`; `dp-008`/`dp-009`).
+- **Presence / "listening"** (§15) — a derived per-agent `last_seen` from existing poll/long-poll/SSE
+  activity (no heartbeat, no always-on socket); `online`/`offline`/`unknown` by an advertised window; read
+  at `GET /v1/agents/{id}/presence` (`presence.schema.json`), owner-only per-account.
+- `capability` gains `ack` + `presence` (§8.0); reference Hub (`ackMessage`/`ackInbox` note/delivery track,
+  presence derivation, `signAckForPush`), `ack.test.ts`/`presence.test.ts`, vectors `sv-013..016` +
+  `dp-008/009/010`. Stacked on the inbound-leg PR (#20) and held in one v0.4 merge train.
+
 ### Added (v0.4 — the human→agent inbound leg, §13)
 **Additive and backward-compatible.** v0.4 introduces the **directive**: a Hub-attested `human:<id>` sends an
 instruction/FYI addressed to one `agent:<id>`, and the agent drains it from a **durable per-agent mailbox**

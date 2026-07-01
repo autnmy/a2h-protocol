@@ -1,0 +1,30 @@
+{
+  "id": "dp-009-ack-tamper-invalid",
+  "class": "downstream-proof",
+  "description": "Pushed-ack tamper proof (v0.4, §14.4): the human's client recomputes ack_sha256 from the ack it received. The honest ack reproduces the signed digest and verifies; an ack whose `note` (or `by`) is altered in transit diverges the digest, so verification MUST fail with a signature mismatch — a terminating proxy cannot forge or rewrite a pushed receipt.",
+  "ref": "spec §14.4",
+  "obligation": "Honest ack verifies against v1; a tampered `note`/`by` fails with `signature mismatch` (not an incidental window/key/jti rejection).",
+  "test_key": "ma2h-test-secret-key-0123456789ab",
+  "signature_alg": "hmac-sha256",
+  "jti": "jti_01HZXACKDEMOFIX",
+  "t": "1782056940",
+  "v1": "BVd0e8A-Qd55YFbrIqk7QwUFacTCa2iQ93fa0Lm3ErU",
+  "honest_ack": {
+    "ma2h_version": "0.4",
+    "type": "ack",
+    "in_reply_to": "msg_01HZXASK0001",
+    "by": "agent:deploybot/dev-team",
+    "acked_at": "2026-06-30T15:49:00Z",
+    "note": "got your Ship it — resuming the deploy",
+    "resolution_id": "res_01HZXR3SOLVE"
+  },
+  "tampered_ack": {
+    "ma2h_version": "0.4",
+    "type": "ack",
+    "in_reply_to": "msg_01HZXASK0001",
+    "by": "agent:deploybot/dev-team",
+    "acked_at": "2026-06-30T15:49:00Z",
+    "note": "HOLD — do not deploy",
+    "resolution_id": "res_01HZXR3SOLVE"
+  }
+}

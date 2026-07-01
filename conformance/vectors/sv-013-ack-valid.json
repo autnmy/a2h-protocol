@@ -1,0 +1,17 @@
+{
+  "id": "sv-013-ack-valid",
+  "class": "schema-validation",
+  "description": "A valid acknowledgment/receipt (v0.4 §14) for an ask/task response — Hub-attested `by`, `in_reply_to` the message id, optional note.",
+  "ref": "spec §14.1",
+  "target": "ack.schema.json",
+  "expect": "valid",
+  "input": {
+    "ma2h_version": "0.4",
+    "type": "ack",
+    "in_reply_to": "msg_01HZXASK0001",
+    "by": "agent:deploybot/dev-team",
+    "acked_at": "2026-06-30T15:49:00Z",
+    "note": "got your Ship it — resuming the deploy",
+    "resolution_id": "res_01HZXR3SOLVE"
+  }
+}

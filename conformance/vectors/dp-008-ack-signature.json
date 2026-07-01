@@ -1,0 +1,30 @@
+{
+  "id": "dp-008-ack-signature",
+  "class": "downstream-proof",
+  "description": "Deterministic PUSHED-ack signature fixture (v0.4, §14.4). A Hub that pushes an ack to a human's client MUST reproduce `v1` from JCS(ack_signed_context) + HMAC-SHA256(test_key); the context binds `ack_sha256` = lowercase-hex SHA-256 of JCS of the ack's { acked_at, by, in_reply_to, note, resolution_id }. Recomputing the digest from `ack` MUST equal signed_context.ack_sha256. (Pulled acks are transport-trusted and unsigned.)",
+  "ref": "spec §14.4",
+  "obligation": "Reproduce header `v1`; reproduce `ack_sha256` from `ack`; reject a tampered ack_signed_context; reject a replayed jti within the window.",
+  "test_key": "ma2h-test-secret-key-0123456789ab",
+  "signature_alg": "hmac-sha256",
+  "ack": {
+    "ma2h_version": "0.4",
+    "type": "ack",
+    "in_reply_to": "msg_01HZXASK0001",
+    "by": "agent:deploybot/dev-team",
+    "acked_at": "2026-06-30T15:49:00Z",
+    "note": "got your Ship it — resuming the deploy",
+    "resolution_id": "res_01HZXR3SOLVE"
+  },
+  "ack_canonical_jcs": "{\"acked_at\":\"2026-06-30T15:49:00Z\",\"by\":\"agent:deploybot/dev-team\",\"in_reply_to\":\"msg_01HZXASK0001\",\"note\":\"got your Ship it — resuming the deploy\",\"resolution_id\":\"res_01HZXR3SOLVE\"}",
+  "signed_context": {
+    "ack_sha256": "bed33692b74ad4f5a84d9575ad2711db9658470180d57a994773d5f1da7607fc",
+    "by": "agent:deploybot/dev-team",
+    "in_reply_to": "msg_01HZXASK0001",
+    "jti": "jti_01HZXACKDEMOFIX",
+    "ma2h_version": "0.4",
+    "t": "1782056940"
+  },
+  "canonical_jcs": "{\"ack_sha256\":\"bed33692b74ad4f5a84d9575ad2711db9658470180d57a994773d5f1da7607fc\",\"by\":\"agent:deploybot/dev-team\",\"in_reply_to\":\"msg_01HZXASK0001\",\"jti\":\"jti_01HZXACKDEMOFIX\",\"ma2h_version\":\"0.4\",\"t\":\"1782056940\"}",
+  "header": "MA2H-Signature: t=1782056940,jti=jti_01HZXACKDEMOFIX,v1=BVd0e8A-Qd55YFbrIqk7QwUFacTCa2iQ93fa0Lm3ErU",
+  "v1": "BVd0e8A-Qd55YFbrIqk7QwUFacTCa2iQ93fa0Lm3ErU"
+}
