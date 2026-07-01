@@ -36,6 +36,24 @@
         "signature_algs": { "type": "array", "items": { "enum": ["hmac-sha256", "ed25519"] }, "description": "Algs the Hub signs directive deliveries with (spec §9.7)." },
         "webhook_supported": { "type": "boolean", "description": "True iff the Hub can push directives to a pre-registered, §9.4-verified agent callback." }
       }
+    },
+    "ack": {
+      "type": "object",
+      "description": "Acknowledgment/receipt primitive (v0.4, spec §14). Absent on a Hub that does not offer acks.",
+      "required": ["enabled"],
+      "properties": {
+        "enabled": { "type": "boolean" },
+        "signature_algs": { "type": "array", "items": { "enum": ["hmac-sha256", "ed25519"] }, "description": "Algs the Hub signs a PUSHED ack with (spec §14.4). Pulled acks are transport-trusted and unsigned." }
+      }
+    },
+    "presence": {
+      "type": "object",
+      "description": "Presence/'listening' signal (v0.4, spec §15). Absent on a Hub that does not offer presence.",
+      "required": ["enabled"],
+      "properties": {
+        "enabled": { "type": "boolean" },
+        "freshness_seconds": { "type": "integer", "minimum": 1, "description": "Window after which a `last_seen` reads `offline` (spec §15.2)." }
+      }
     }
   }
 }

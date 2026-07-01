@@ -1,0 +1,14 @@
+{
+  "id": "sv-015-presence-valid",
+  "class": "schema-validation",
+  "description": "A valid presence read body (v0.4 §15.3): an online agent with a last_seen and the freshness window.",
+  "ref": "spec §15.3",
+  "target": "presence.schema.json",
+  "expect": "valid",
+  "input": {
+    "agent_id": "deploybot/dev-team",
+    "state": "online",
+    "last_seen": "2026-06-30T15:48:30Z",
+    "freshness_seconds": 90
+  }
+}

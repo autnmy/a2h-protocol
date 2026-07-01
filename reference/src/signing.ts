@@ -7,6 +7,8 @@
 import { createHash, createHmac, timingSafeEqual } from "node:crypto";
 import { canonicalize } from "./canonicalize.js";
 import type {
+  Ack,
+  AckSignedContext,
   InboundDirective,
   InboundSignedContext,
   JsonObject,
@@ -216,5 +218,53 @@ export function signInbound(sc: InboundSignedContext, opts: SignOptions): SignRe
 }
 
 export function verifyInbound(sc: InboundSignedContext, v1: string, opts: VerifyOptions): VerifyResult {
+  return verifyCanonical(sc, v1, opts);
+}
+
+// ---- Pushed-ack signature (spec §14.4) ----
+
+export interface AckSignedContextParts {
+  ack_sha256: string;
+  by: Ack["by"];
+  in_reply_to: string;
+  jti: string;
+  ma2h_version: AckSignedContext["ma2h_version"];
+  t: string | number;
+}
+
+/** Assemble the canonical ack_signed_context from its parts. */
+export function buildAckSignedContext(parts: AckSignedContextParts): AckSignedContext {
+  return {
+    ack_sha256: parts.ack_sha256,
+    by: parts.by,
+    in_reply_to: parts.in_reply_to,
+    jti: parts.jti,
+    ma2h_version: parts.ma2h_version,
+    t: String(parts.t),
+  };
+}
+
+/**
+ * Digest of the ack payload the human consumes, bound into the §14.4 signature. Computed over the
+ * fixed-key wrapper `{ acked_at, by, in_reply_to, note, resolution_id }` (each `null` when absent) so a
+ * tampered `note`/`by` on a pushed ack fails verification. The verifier RECOMPUTES it from the received ack.
+ */
+export function computeAckSha256(ack: Ack): string {
+  const canonical = canonicalize({
+    acked_at: ack.acked_at,
+    by: ack.by,
+    in_reply_to: ack.in_reply_to,
+    note: ack.note ?? null,
+    resolution_id: ack.resolution_id ?? null,
+  });
+  return createHash("sha256").update(canonical).digest("hex");
+}
+
+/** Sign a pushed ack (§14.4). Pulled acks are transport-trusted and unsigned. */
+export function signAck(sc: AckSignedContext, opts: SignOptions): SignResult {
+  return signCanonical(sc, opts);
+}
+
+export function verifyAck(sc: AckSignedContext, v1: string, opts: VerifyOptions): VerifyResult {
   return verifyCanonical(sc, v1, opts);
 }

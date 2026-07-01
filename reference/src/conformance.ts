@@ -7,24 +7,32 @@
 
 import { readdirSync, readFileSync } from "node:fs";
 import {
+  validateAck,
   validateCapability,
   validateInboundMessage,
   validateMessage,
+  validatePresence,
   validateResponse,
   type ValidationResult,
 } from "./envelope.js";
 import {
+  buildAckSignedContext,
   buildInboundSignedContext,
   buildSignedContext,
+  computeAckSha256,
   computeDirectivePayloadSha256,
   computePayloadSha256,
+  signAck,
   signInbound,
   signResponse,
+  verifyAck,
   verifyInbound,
   verifyResponse,
 } from "./signing.js";
 import { canonicalize } from "./canonicalize.js";
 import type {
+  Ack,
+  AckSignedContext,
   InboundDirective,
   InboundSignedContext,
   JsonObject,
@@ -58,6 +66,10 @@ function validateAgainst(target: string, data: unknown): ValidationResult {
       return validateCapability(data);
     case "inbound-message.schema.json":
       return validateInboundMessage(data);
+    case "ack.schema.json":
+      return validateAck(data);
+    case "presence.schema.json":
+      return validatePresence(data);
     default:
       throw new Error(`vector target not runnable: ${target}`);
   }
@@ -185,6 +197,54 @@ function runOne(id: string, cls: string, v: Record<string, unknown>): VectorResu
     if (res.ok) return { id, cls, status: "fail", detail: "tampered directive verified ok — binding broken" };
     if (res.reason !== "signature mismatch") {
       return { id, cls, status: "fail", detail: `tampered directive rejected for the wrong reason: ${res.reason}` };
+    }
+    return { id, cls, status: "pass" };
+  }
+  if (cls === "downstream-proof" && id.startsWith("dp-008")) {
+    // Pushed-ack signature (§14.4): mirror of dp-001/dp-005 for the receipt. Reproduce header `v1` from
+    // JCS(ack_signed_context) + HMAC, and prove `ack_sha256` binds the ack by recomputing it from `ack`.
+    const sc = v["signed_context"] as AckSignedContext;
+    const key = String(v["test_key"]);
+    const { v1, canonical } = signAck(buildAckSignedContext(sc), { key });
+    let ok = v1 === v["v1"] && canonical === v["canonical_jcs"];
+    let detail = "signature/canonical mismatch";
+    const ack = v["ack"] as Ack | undefined;
+    if (ack) {
+      const recomputed = computeAckSha256(ack);
+      if (recomputed !== sc.ack_sha256) {
+        ok = false;
+        detail = "ack_sha256 does not bind the ack (recompute mismatch)";
+      }
+    }
+    return ok ? { id, cls, status: "pass" } : { id, cls, status: "fail", detail };
+  }
+  if (cls === "downstream-proof" && id.startsWith("dp-009")) {
+    // Pushed-ack tamper proof (§14.4): the human's client recomputes ack_sha256 from the received ack.
+    // Honest control verifies; a tampered `note`/`by` diverges the digest → signature mismatch.
+    const key = String(v["test_key"]);
+    const v1 = String(v["v1"]);
+    const jti = String(v["jti"]);
+    const t = String(v["t"]);
+    const now = Number(t) * 1000 + 5000;
+    const scFrom = (a: Ack): AckSignedContext =>
+      buildAckSignedContext({
+        ack_sha256: computeAckSha256(a),
+        by: a.by,
+        in_reply_to: a.in_reply_to,
+        jti,
+        ma2h_version: a.ma2h_version,
+        t,
+      });
+    const honest = v["honest_ack"] as Ack;
+    const tampered = v["tampered_ack"] as Ack;
+    const honestRes = verifyAck(scFrom(honest), v1, { key, now });
+    if (!honestRes.ok) {
+      return { id, cls, status: "fail", detail: `honest control did not verify (${honestRes.reason}) — tamper proof inconclusive` };
+    }
+    const res = verifyAck(scFrom(tampered), v1, { key, now });
+    if (res.ok) return { id, cls, status: "fail", detail: "tampered ack verified ok — binding broken" };
+    if (res.reason !== "signature mismatch") {
+      return { id, cls, status: "fail", detail: `tampered ack rejected for the wrong reason: ${res.reason}` };
     }
     return { id, cls, status: "pass" };
   }

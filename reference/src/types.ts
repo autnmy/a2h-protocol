@@ -213,7 +213,72 @@ export interface SubmitAck {
   review_url?: string;
 }
 
-export type GetMessageBody = A2hMessage & { id: string; status: Status; response?: A2hResponse };
+// ---- Acknowledgment / receipt (spec §14, v0.4) ----
+
+/** A one-shot terminal receipt (spec §14). Cross-cutting; the Hub attests `by`. */
+export interface Ack {
+  ma2h_version: A2hVersion;
+  type: "ack";
+  in_reply_to: string;
+  by: Actor;
+  acked_at: string;
+  note?: string;
+  resolution_id?: string;
+}
+
+/** The fields bound by the pushed-ack signature (spec §14.4). */
+export interface AckSignedContext {
+  ack_sha256: string;
+  by: Actor;
+  in_reply_to: string;
+  jti: string;
+  ma2h_version: A2hVersion;
+  t: string;
+}
+
+/**
+ * The additive receipt track surfaced on the GET body (spec §14.2), orthogonal to `resolution`.
+ * `queued`/`delivered`/`expired` are directive-only (mailbox, §13); `delivered-to-agent`/`acknowledged`
+ * are the response-leg states (§6); `acknowledged` is shared.
+ */
+export type DeliveryState = "queued" | "delivered" | "expired" | "delivered-to-agent" | "acknowledged";
+export interface Delivery {
+  state: DeliveryState;
+  delivered_at?: string;
+  acknowledged_at?: string;
+  ack?: Ack;
+}
+
+/**
+ * The response-leg receipt on the `GET /v1/messages/{id}` body (spec §14.2) — only the response-leg
+ * states, matching `get-message.schema.json` (the directive-only `queued`/`delivered`/`expired` live on the
+ * mailbox, §13, not here).
+ */
+export type ResponseDeliveryState = "delivered-to-agent" | "acknowledged";
+export interface ResponseDelivery {
+  state: ResponseDeliveryState;
+  delivered_at?: string;
+  acknowledged_at?: string;
+  ack?: Ack;
+}
+
+// ---- Presence / "listening" (spec §15, v0.4) ----
+
+export type PresenceState = "online" | "offline" | "unknown";
+export interface Presence {
+  agent_id: string;
+  state: PresenceState;
+  last_seen?: string;
+  /** Required (spec §15.3 / presence.schema.json) — clients need the window to interpret the state. */
+  freshness_seconds: number;
+}
+
+export type GetMessageBody = A2hMessage & {
+  id: string;
+  status: Status;
+  response?: A2hResponse;
+  delivery?: ResponseDelivery;
+};
 
 export interface Capability {
   ma2h_version: A2hVersion;
@@ -237,6 +302,10 @@ export interface Capability {
     signature_algs?: Array<"hmac-sha256" | "ed25519">;
     webhook_supported?: boolean;
   };
+  /** Acknowledgment/receipt primitive (spec §8.0, §14). */
+  ack?: { enabled: boolean; signature_algs?: Array<"hmac-sha256" | "ed25519"> };
+  /** Presence/'listening' signal (spec §8.0, §15). */
+  presence?: { enabled: boolean; freshness_seconds?: number };
 }
 
 export interface A2hError {

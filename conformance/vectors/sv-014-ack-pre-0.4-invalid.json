@@ -1,0 +1,15 @@
+{
+  "id": "sv-014-ack-pre-0.4-invalid",
+  "class": "schema-validation",
+  "description": "An ack claiming a pre-0.4 ma2h_version is rejected — the ack primitive is a v0.4 feature (minor >= 4).",
+  "ref": "spec §14.1, §10",
+  "target": "ack.schema.json",
+  "expect": "invalid",
+  "input": {
+    "ma2h_version": "0.3",
+    "type": "ack",
+    "in_reply_to": "msg_01HZXASK0001",
+    "by": "agent:deploybot/dev-team",
+    "acked_at": "2026-06-30T15:49:00Z"
+  }
+}

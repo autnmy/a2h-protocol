@@ -1,0 +1,9 @@
+{
+  "id": "sv-016-presence-bad-state-invalid",
+  "class": "schema-validation",
+  "description": "A presence body with a state outside online|offline|unknown is rejected.",
+  "ref": "spec §15.2",
+  "target": "presence.schema.json",
+  "expect": "invalid",
+  "input": { "agent_id": "deploybot/dev-team", "state": "away" }
+}
