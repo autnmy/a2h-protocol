@@ -218,3 +218,29 @@ test("receipt reads are owner-only: a non-owner gets undefined (§14.4)", () => 
   assert.equal(hub.getDelivery(id, "human:alice")?.state, "acknowledged", "the owner reads the receipt");
   assert.equal(hub.getDelivery(id, "human:eve"), undefined, "a non-owner reads nothing");
 });
+
+test("response receipt is readable by the agent's owner (§14.4)", () => {
+  const now = { t: T0 };
+  const hub = newHub(now);
+  hub.setAgentOwner(AGENT, "human:you"); // provision: this agent belongs to human:you
+  const { id } = hub.submit(ask());
+  hub.resolve(id, { actor: "human:you", resolution: "answered", value: "ship" });
+  hub.get(id, AGENT); // delivered-to-agent
+  hub.ackMessage(id, AGENT, { note: "resuming" });
+  assert.equal(hub.getDelivery(id, "human:you")?.state, "acknowledged", "the owner reads the response receipt");
+  assert.equal(hub.getDelivery(id, "human:eve"), undefined, "a non-owner reads nothing");
+});
+
+test("returned receipts are immutable: mutating a returned ack/delivery does not corrupt the store", () => {
+  const now = { t: T0 };
+  const hub = newHub(now);
+  const { id } = hub.submit(ask());
+  hub.resolve(id, { actor: "human:you", resolution: "answered", value: "ship" });
+  hub.get(id, AGENT);
+  const ack = hub.ackMessage(id, AGENT, { note: "on it" });
+  (ack as { note?: string }).note = "TAMPERED";
+  const got = hub.get(id, AGENT);
+  assert.equal(got?.delivery?.ack?.note, "on it", "the stored ack is unaffected by mutating the returned one");
+  (got!.delivery as { state: string }).state = "queued";
+  assert.equal(hub.get(id, AGENT)?.delivery?.state, "acknowledged", "the stored delivery is unaffected by mutating a returned GET body");
+});

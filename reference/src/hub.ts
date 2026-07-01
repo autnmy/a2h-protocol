@@ -250,7 +250,8 @@ export class Hub {
       id: r.id,
       status: r.status,
       ...(r.response ? { response: r.response } : {}),
-      ...(delivery ? { delivery } : {}),
+      // Clone the delivery so a caller mutating `got.delivery` can't corrupt the stored receipt track.
+      ...(delivery ? { delivery: structuredClone(delivery) } : {}),
     };
   }
 
@@ -429,9 +430,7 @@ export class Hub {
     if (d?.state === "acknowledged") return;
     if (d?.state === "delivered-to-agent") return;
     this.deliveries.set(id, { state: "delivered-to-agent", delivered_at: new Date(nowMs).toISOString() });
-    // Record the receipt owner (the human who owns the submitting agent) for the owner-only read (§14.4).
-    const owner = this.presenceOwners.get(this.store.get(id)?.message.agent.id ?? "");
-    if (owner !== undefined) this.deliveryOwners.set(id, owner);
+    // (The response-receipt owner is the submitting agent's owner, resolved at read time in getDelivery.)
   }
 
   /**
@@ -449,7 +448,8 @@ export class Hub {
       throw new HubError("not_acknowledgeable", "only a terminal ask/task response can be acknowledged (§14.3)");
     }
     const existing = this.deliveries.get(id);
-    if (existing?.state === "acknowledged" && existing.ack) return existing.ack; // first-ack-wins, idempotent
+    // first-ack-wins, idempotent — return a CLONE so a caller can't mutate the stored immutable receipt.
+    if (existing?.state === "acknowledged" && existing.ack) return structuredClone(existing.ack);
     // §14.2: the agent can only acknowledge an answer it actually RECEIVED — the receipt must be
     // `delivered-to-agent` (a push 2xx or the agent's authenticated GET) before it can advance to
     // `acknowledged`. This stops a client polling /ack to fake a receipt without ever fetching the answer.
@@ -666,9 +666,19 @@ export class Hub {
    * Returns a clone so the stored receipt stays immutable.
    */
   getDelivery(id: string, caller: string): Delivery | undefined {
-    if (this.deliveryOwners.get(id) !== caller) return undefined;
-    const d = this.directiveDeliveries.get(id) ?? this.deliveries.get(id);
-    return d ? structuredClone(d) : undefined;
+    const dir = this.directiveDeliveries.get(id);
+    if (dir !== undefined) {
+      // Directive receipt: the owner is the `from` snapshotted at send time (§14.4).
+      return this.deliveryOwners.get(id) === caller ? structuredClone(dir) : undefined;
+    }
+    const msg = this.deliveries.get(id);
+    if (msg !== undefined) {
+      // Response receipt: the owner is the submitting agent's owner, resolved at READ time — so
+      // provisioning via setAgentOwner at any point before the read enables the human's §14.4 read path.
+      const owner = this.presenceOwners.get(this.store.get(id)?.message.agent.id ?? "");
+      return owner !== undefined && owner === caller ? structuredClone(msg) : undefined;
+    }
+    return undefined;
   }
 
   /** Detached §9.7 signature for one directive delivery (fresh `t`/`jti`). */
