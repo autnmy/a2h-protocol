@@ -37,6 +37,7 @@ import type {
   PresenceState,
   Priority,
   Resolution,
+  ResponseDelivery,
   Status,
   SubmitAck,
   TaskMessage,
@@ -121,15 +122,15 @@ export interface ResolveInput {
 }
 
 export type GetResult =
-  | (A2hMessage & { id: string; status: Status; response?: A2hResponse; delivery?: Delivery })
+  | (A2hMessage & { id: string; status: Status; response?: A2hResponse; delivery?: ResponseDelivery })
   | null;
 
 export class Hub {
   private readonly store = new Map<string, MessageRecord>();
   /** Per-`agent.id` mailbox of pending directives (spec §8.7, §13). FIFO = array order. */
   private readonly mailboxes = new Map<string, DirectiveRecord[]>();
-  /** Receipt track for ask/task responses (spec §14.2), keyed by message id. */
-  private readonly deliveries = new Map<string, Delivery>();
+  /** Receipt track for ask/task responses (spec §14.2), keyed by message id — response-leg states only. */
+  private readonly deliveries = new Map<string, ResponseDelivery>();
   /** Receipt track for directives (spec §14.2), keyed by directive id — kept separate from `deliveries`
    * so a `/v1/inbox/ack` retry can never surface a response-leg ack (the two ack APIs stay disjoint). */
   private readonly directiveDeliveries = new Map<string, Delivery>();
@@ -627,6 +628,9 @@ export class Hub {
       // Only a DELIVERED (drained/in-flight) directive can be acknowledged — a still-`queued` id that was
       // never drained is a no-op, so a client can't skip the drain and fabricate a receipt (§14.2).
       if (!rec.acked && wanted.has(rec.directive.id) && rec.deliveredAtMs !== undefined) {
+        // A consume arriving after `expires_at` loses to expiry (§13.3) — the directive is dropped and its
+        // receipt becomes `expired`, never a false `acknowledged`. (expireDirective marks it for compaction.)
+        if (this.expireDirective(rec, t)) continue;
         rec.acked = true;
         rec.ack = this.buildAck(rec.directive.id, principal, t, opts?.note);
         // Persist the receipt BEFORE the record is compacted out below — else the human-facing ack is

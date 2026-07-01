@@ -161,6 +161,23 @@ test("acking an un-drained (queued) directive is a no-op — no fabricated recei
   assert.equal(hub.drainInbox(AGENT).length, 1, "and it is still deliverable");
 });
 
+test("a consume after expires_at loses to expiry — the receipt is `expired`, not `acknowledged` (§13.3)", () => {
+  const now = { t: T0 };
+  const hub = newHub(now);
+  const { id } = hub.sendDirective({
+    from: "human:alice",
+    to: `agent:${AGENT}` as DirectiveTo,
+    title: "hold",
+    expires_at: new Date(T0 + 10_000).toISOString(),
+  });
+  hub.drainInbox(AGENT); // drained before expiry (deliveredAtMs set)
+  now.t = T0 + 20_000; // ack arrives AFTER expires_at
+  const res = hub.ackInbox(AGENT, [id], { note: "too late" });
+  assert.equal(res.acked, 0, "a late consume does not acknowledge");
+  assert.equal(res.acks.length, 0);
+  assert.equal(hub.getDelivery(id, "human:alice")?.state, "expired");
+});
+
 test("an expired directive's receipt advances to `expired`, not a stuck `queued` (§13.3/§14.2)", () => {
   const now = { t: T0 };
   const hub = newHub(now);

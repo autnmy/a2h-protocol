@@ -249,6 +249,19 @@ export interface Delivery {
   ack?: Ack;
 }
 
+/**
+ * The response-leg receipt on the `GET /v1/messages/{id}` body (spec §14.2) — only the response-leg
+ * states, matching `get-message.schema.json` (the directive-only `queued`/`delivered`/`expired` live on the
+ * mailbox, §13, not here).
+ */
+export type ResponseDeliveryState = "delivered-to-agent" | "acknowledged";
+export interface ResponseDelivery {
+  state: ResponseDeliveryState;
+  delivered_at?: string;
+  acknowledged_at?: string;
+  ack?: Ack;
+}
+
 // ---- Presence / "listening" (spec §15, v0.4) ----
 
 export type PresenceState = "online" | "offline" | "unknown";
@@ -256,14 +269,15 @@ export interface Presence {
   agent_id: string;
   state: PresenceState;
   last_seen?: string;
-  freshness_seconds?: number;
+  /** Required (spec §15.3 / presence.schema.json) — clients need the window to interpret the state. */
+  freshness_seconds: number;
 }
 
 export type GetMessageBody = A2hMessage & {
   id: string;
   status: Status;
   response?: A2hResponse;
-  delivery?: Delivery;
+  delivery?: ResponseDelivery;
 };
 
 export interface Capability {
